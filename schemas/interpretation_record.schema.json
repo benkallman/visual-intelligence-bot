@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "interpretation_record",
+  "title": "InterpretationRecord",
+  "description": "Two-pass visual interpretation of one art image. Pass 1 is literal only. Pass 2 is constrained inference only. The two passes must never be merged.",
+  "type": "object",
+  "required": ["record_id", "source_id", "schema_version", "pass1", "pass2", "governance"],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "description": "Stable unique ID, e.g. rec_20260417_001"
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Links to SourceRecord"
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "Version of this schema, e.g. 0.1.0"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "model": {
+      "type": "string",
+      "description": "Model used for interpretation, e.g. claude-sonnet-4-6"
+    },
+    "pass1": {
+      "type": "object",
+      "description": "PASS 1: Literal description only. No inference, no symbolism, no emotion, no narrative.",
+      "required": ["description", "elements", "pass1_clean"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Free-text literal description. Observable facts only."
+        },
+        "elements": {
+          "type": "array",
+          "description": "Discrete observable elements listed individually",
+          "items": {
+            "type": "object",
+            "required": ["element", "location", "confidence"],
+            "properties": {
+              "element": { "type": "string" },
+              "location": { "type": "string" },
+              "confidence": {
+                "type": "string",
+                "enum": ["certain", "probable", "uncertain"]
+              }
+            }
+          }
+        },
+        "dominant_colors": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "composition_notes": {
+          "type": ["string", "null"],
+          "description": "Spatial arrangement only, no interpretation"
+        },
+        "pass1_clean": {
+          "type": "boolean",
+          "description": "Set to false if Pass 1 contains any inference. Blocks Pass 2 until corrected."
+        }
+      },
+      "additionalProperties": false
+    },
+    "pass2": {
+      "type": "object",
+      "description": "PASS 2: Constrained interpretation only. Every claim must be provisional. No orphaned inferences.",
+      "required": ["interpretive_notes", "symbolic_candidates", "recurrence_references", "prohibited_inference_check", "pass2_clean"],
+      "properties": {
+        "interpretive_notes": {
+          "type": "string",
+          "description": "Interpretive analysis grounded in Pass 1 evidence. Must cite specific Pass 1 elements."
+        },
+        "symbolic_candidates": {
+          "type": "array",
+          "description": "Provisional symbolic readings. Never assertions.",
+          "items": {
+            "type": "object",
+            "required": ["candidate", "grounding", "confidence"],
+            "properties": {
+              "candidate": {
+                "type": "string",
+                "description": "The proposed symbolic reading"
+              },
+              "grounding": {
+                "type": "string",
+                "description": "Specific Pass 1 element(s) that motivate this candidate"
+              },
+              "confidence": {
+                "type": "string",
+                "enum": ["low", "medium"],
+                "description": "High confidence is not permitted for symbolic candidates"
+              },
+              "archive_support": {
+                "type": ["string", "null"],
+                "description": "Reference to archive concept or prior record that supports this reading"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "recurrence_references": {
+          "type": "array",
+          "description": "Other records where matching elements appear. Evidence-based only.",
+          "items": {
+            "type": "object",
+            "required": ["record_id", "matched_element", "match_strength"],
+            "properties": {
+              "record_id": { "type": "string" },
+              "matched_element": { "type": "string" },
+              "match_strength": {
+                "type": "string",
+                "enum": ["exact", "close", "loose"]
+              },
+              "notes": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "archive_context_used": {
+          "type": "array",
+          "description": "Archive concepts referenced during Pass 2. Must not override Pass 1 evidence.",
+          "items": { "type": "string" }
+        },
+        "prohibited_inference_check": {
+          "type": "object",
+          "required": ["passed", "violations"],
+          "properties": {
+            "passed": {
+              "type": "boolean",
+              "description": "True only if zero violations found"
+            },
+            "violations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["rule", "offending_text"],
+                "properties": {
+                  "rule": { "type": "string" },
+                  "offending_text": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "uncertainty_notes": {
+          "type": ["string", "null"],
+          "description": "Explicit statement of what cannot be determined from this image"
+        },
+        "pass2_clean": {
+          "type": "boolean",
+          "description": "True only if prohibited_inference_check.passed is true and no symbolic candidate has confidence=high"
+        }
+      },
+      "additionalProperties": false
+    },
+    "governance": {
+      "type": "object",
+      "required": ["review_status", "human_reviewed"],
+      "properties": {
+        "review_status": {
+          "type": "string",
+          "enum": ["pending", "flagged", "approved", "rejected", "corrected"]
+        },
+        "human_reviewed": { "type": "boolean" },
+        "reviewed_by": { "type": ["string", "null"] },
+        "reviewed_at": { "type": ["string", "null"], "format": "date-time" },
+        "correction_notes": { "type": ["string", "null"] },
+        "flag_reason": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

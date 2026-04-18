@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "approved_sources",
+  "title": "ApprovedSourcesRegistry",
+  "description": "Registry of approved sources. Ingestion must be blocked for any source not listed here.",
+  "type": "object",
+  "required": ["sources"],
+  "properties": {
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_registry_id", "name", "base_url", "source_type", "rights_default", "active"],
+        "properties": {
+          "source_registry_id": { "type": "string" },
+          "name": { "type": "string" },
+          "base_url": { "type": "string", "format": "uri" },
+          "source_type": {
+            "type": "string",
+            "enum": ["museum_collection", "gallery_page", "artist_site", "archive_page", "rss_item", "public_post"]
+          },
+          "rights_default": {
+            "type": "string",
+            "enum": ["public_domain", "cc_license", "rights_unknown", "educational_use"]
+          },
+          "notes": { "type": ["string", "null"] },
+          "active": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

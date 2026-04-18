@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "source_record",
+  "title": "SourceRecord",
+  "description": "Provenance record for one ingested art item.",
+  "type": "object",
+  "required": ["source_id", "url", "source_type", "access_date", "rights_flag", "approved_source"],
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "description": "Stable unique ID for this source item, e.g. src_20260417_001"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "image_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Direct URL to the image file if separately resolvable"
+    },
+    "local_image_path": {
+      "type": ["string", "null"],
+      "description": "Relative path to downloaded image file, if downloaded"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["museum_collection", "gallery_page", "artist_site", "archive_page", "rss_item", "public_post", "manual_entry"]
+    },
+    "approved_source": {
+      "type": "boolean",
+      "description": "Must be true. Ingestion must be blocked if false."
+    },
+    "approved_source_id": {
+      "type": ["string", "null"],
+      "description": "Reference to registry entry in data/sources/approved_sources.json"
+    },
+    "title": {
+      "type": ["string", "null"]
+    },
+    "artist": {
+      "type": ["string", "null"]
+    },
+    "date_created": {
+      "type": ["string", "null"],
+      "description": "Known creation date of the artwork, free text"
+    },
+    "medium": {
+      "type": ["string", "null"]
+    },
+    "dimensions": {
+      "type": ["string", "null"]
+    },
+    "collection": {
+      "type": ["string", "null"]
+    },
+    "access_date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date when this URL was accessed"
+    },
+    "rights_flag": {
+      "type": "string",
+      "enum": ["public_domain", "cc_license", "rights_unknown", "rights_restricted", "educational_use"],
+      "description": "Best-known rights status at time of ingest"
+    },
+    "rights_notes": {
+      "type": ["string", "null"]
+    },
+    "duplicate_of": {
+      "type": ["string", "null"],
+      "description": "source_id of an existing record if this appears to be a duplicate"
+    },
+    "checksum": {
+      "type": ["string", "null"],
+      "description": "SHA-256 of the image file if downloaded, for deduplication"
+    }
+  },
+  "additionalProperties": false
+}
