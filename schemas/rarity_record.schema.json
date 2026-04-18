@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rarity_record",
+  "title": "RarityRecord",
+  "description": "Evaluation record for one image's rarity and anomaly profile.",
+  "type": "object",
+  "required": ["rarity_record_id", "source_id", "keep", "rarity_score", "anomaly_types", "key_elements", "reuse_value", "reason", "risk_of_being_common"],
+  "properties": {
+    "rarity_record_id": { "type": "string" },
+    "source_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "model": { "type": "string" },
+    "keep": { "type": "boolean" },
+    "rarity_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "dimension_scores": {
+      "type": "object",
+      "properties": {
+        "distribution_likelihood": { "type": "number", "minimum": 0, "maximum": 1 },
+        "visual_uniqueness": { "type": "number", "minimum": 0, "maximum": 1 },
+        "cultural_unfamiliarity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "memorability": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "anomaly_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["spatial", "behavioral", "architectural", "cultural", "compositional", "material", "scale", "temporal"]
+      }
+    },
+    "key_elements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Pass 1 elements that drove the keep/reject decision"
+    },
+    "reuse_value": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "reason": {
+      "type": "string",
+      "description": "One sentence. Must reference specific Pass 1 elements."
+    },
+    "risk_of_being_common": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "human_review_required": {
+      "type": "boolean",
+      "description": "Set true if risk_of_being_common is high or rarity_score < 0.4"
+    }
+  },
+  "additionalProperties": false
+}

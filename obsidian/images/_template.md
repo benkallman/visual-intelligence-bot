@@ -8,6 +8,9 @@ date_created: "{{date_created}}"
 medium: "{{medium}}"
 source_url: "{{source_url}}"
 access_date: "{{access_date}}"
+rarity_score: {{rarity_score}}
+reuse_value: "{{reuse_value}}"
+anomaly_types: {{anomaly_types}}
 rights_flag: "{{rights_flag}}"
 review_status: "{{review_status}}"
 tags: [image-record]

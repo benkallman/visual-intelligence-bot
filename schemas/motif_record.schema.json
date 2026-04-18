@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "motif_record",
+  "title": "MotifRecord",
+  "description": "A recurring visual structure identified across multiple Pass 1 records.",
+  "type": "object",
+  "required": ["motif_id", "elements", "recurrence_count", "source_record_ids", "variation_notes", "confidence"],
+  "properties": {
+    "motif_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "elements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Specific observable elements that define this motif"
+    },
+    "recurrence_count": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "source_record_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 2,
+      "description": "IDs of interpretation records where this motif appears"
+    },
+    "variation_notes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Structural variation across instances — position, scale, medium, configuration only"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence that these are genuinely the same structural element across records"
+    },
+    "prompt_pack": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Image generation prompts derived from this motif"
+    },
+    "obsidian_note_path": {
+      "type": ["string", "null"],
+      "description": "Relative path to the visual study page in the Obsidian vault"
+    },
+    "human_reviewed": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}
