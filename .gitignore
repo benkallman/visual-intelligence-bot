@@ -36,10 +36,12 @@ desktop.ini
 data/records/*.json
 data/sources/*.json
 data/flags/*.json
+data/flags/rejected/*.json
 # Keep gitignored data dirs tracked via .gitkeep
 !data/records/.gitkeep
 !data/sources/.gitkeep
 !data/flags/.gitkeep
+!data/flags/rejected/.gitkeep
 
 # Downloaded image cache
 data/images/

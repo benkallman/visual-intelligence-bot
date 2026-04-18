@@ -5,9 +5,9 @@ Uses the LLM for comparison; returns a list of match objects.
 
 import json
 import os
-import anthropic
 
 from src.ingest.record_store import load_all_records
+from src.providers import complete, LLMRequest, ProviderUnavailableError
 
 PROMPT_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..", "prompts", "recurrence", "recurrence_check.md"
@@ -23,7 +23,6 @@ def run_recurrence_check(interpretation_record: dict) -> list:
     if not existing_records:
         return []
 
-    # Exclude the current record from comparison
     new_id = interpretation_record["record_id"]
     candidates = [
         {"record_id": r["record_id"], "elements": r.get("pass1", {}).get("elements", [])}
@@ -37,27 +36,28 @@ def run_recurrence_check(interpretation_record: dict) -> list:
     with open(PROMPT_PATH, "r", encoding="utf-8") as f:
         system_prompt = f.read()
 
-    client = anthropic.Anthropic()
-
     payload = {
         "new_record_id": new_id,
         "new_elements": new_elements,
         "existing_records": candidates,
     }
 
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
+    request = LLMRequest(
         system=system_prompt,
-        messages=[
-            {
-                "role": "user",
-                "content": f"Run a recurrence check on this input:\n\n```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn a JSON array of matches only. Return [] if no matches.",
-            }
-        ],
+        user_text=(
+            f"Run a recurrence check on this input:\n\n"
+            f"```json\n{json.dumps(payload, indent=2)}\n```\n\n"
+            "Return a JSON array of matches only. Return [] if no matches."
+        ),
+        max_tokens=1024,
     )
 
-    raw = message.content[0].text.strip()
+    try:
+        response = complete(request)
+    except ProviderUnavailableError as exc:
+        raise RuntimeError(f"Recurrence check failed — no provider available: {exc}") from exc
+
+    raw = response.text.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):

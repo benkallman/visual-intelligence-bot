@@ -58,7 +58,7 @@ Concept definitions live in the `visual-intelligence-archive` repo. This repo co
 ## Stack
 
 - **Runtime**: Python 3.11+
-- **LLM calls**: Anthropic SDK (`anthropic`)
+- **LLM calls**: provider router (`src/providers/`) — supports Anthropic, OpenAI, xAI, Ollama
 - **Storage**: JSON files in `data/records/`, Markdown in `obsidian/`
 - **CLI entrypoint**: `scripts/ingest.py`
 - **No database in MVP** — file-based, human-auditable
@@ -98,10 +98,39 @@ visual-intelligence-bot/
 
 ---
 
+## Provider Configuration
+
+Copy `.env.example` to `.env` and fill in at least one provider.
+
+```bash
+cp .env.example .env
+```
+
+| Provider | Required env var | Notes |
+|---|---|---|
+| Anthropic | `ANTHROPIC_API_KEY` | Default model: `claude-sonnet-4-6` |
+| OpenAI | `OPENAI_API_KEY` | Default model: `gpt-4o` |
+| xAI / Grok | `XAI_API_KEY` | Default model: `grok-2-vision-1212` |
+| Ollama | _(none)_ | Requires Ollama running locally; `ollama pull llava` |
+
+Set `PROVIDER_FALLBACK_ORDER` to control priority (default: `anthropic,openai,xai,ollama`).  
+Providers with missing credentials are skipped silently. If all fail, a clear error is raised.
+
+```bash
+# Anthropic only
+ANTHROPIC_API_KEY=sk-ant-... python scripts/ingest.py ...
+
+# Ollama only (no remote keys needed)
+PROVIDER_FALLBACK_ORDER=ollama python scripts/ingest.py ...
+```
+
+---
+
 ## Quickstart
 
 ```bash
 pip install -r requirements.txt
+cp .env.example .env   # then add at least one provider key
 python scripts/ingest.py --source-url "https://example.com/artwork" --source-id "src_001"
 ```
 

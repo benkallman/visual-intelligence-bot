@@ -7,7 +7,8 @@ Runs after Pass 1 is complete.
 import json
 import os
 import datetime
-import anthropic
+
+from src.providers import complete, LLMRequest, ProviderUnavailableError
 
 PROMPT_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..", "prompts", "scoring", "rarity_scorer.md"
@@ -38,28 +39,29 @@ def run_rarity_scorer(interpretation_record: dict) -> dict:
     with open(PROMPT_PATH, "r", encoding="utf-8") as f:
         scorer_prompt = f.read()
 
-    system = f"{constraints}\n\n{scorer_prompt}"
-    client = anthropic.Anthropic()
-
     payload = {
         "pass1_description": pass1_description,
         "key_elements": key_elements,
         "anomaly_types": anomaly_types,
     }
 
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
+    request = LLMRequest(
+        system=f"{constraints}\n\n{scorer_prompt}",
+        user_text=f"Score this image record:\n\n```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn valid JSON only.",
         max_tokens=512,
-        system=system,
-        messages=[
-            {
-                "role": "user",
-                "content": f"Score this image record:\n\n```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn valid JSON only.",
-            }
-        ],
     )
 
-    raw = message.content[0].text.strip()
+    try:
+        response = complete(request)
+    except ProviderUnavailableError as exc:
+        return {
+            "rarity_record_id": rarity_record_id,
+            "source_id": source_id,
+            "created_at": datetime.datetime.utcnow().isoformat() + "Z",
+            "error": f"Provider unavailable: {exc}",
+        }
+
+    raw = response.text.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -68,11 +70,12 @@ def run_rarity_scorer(interpretation_record: dict) -> dict:
 
     result = json.loads(raw)
 
-    rarity_record = {
+    return {
         "rarity_record_id": rarity_record_id,
         "source_id": source_id,
         "created_at": datetime.datetime.utcnow().isoformat() + "Z",
-        "model": "claude-sonnet-4-6",
+        "provider": response.provider_used,
+        "model": response.model_used,
         "keep": result.get("rarity_score", 0) >= 0.4 and result.get("risk_of_being_common") != "high",
         "rarity_score": result.get("rarity_score", 0),
         "dimension_scores": result.get("dimension_scores", {}),
@@ -81,7 +84,8 @@ def run_rarity_scorer(interpretation_record: dict) -> dict:
         "reuse_value": result.get("reuse_value", "low"),
         "reason": result.get("reason", ""),
         "risk_of_being_common": result.get("risk_of_being_common", "medium"),
-        "human_review_required": result.get("risk_of_being_common") == "high" or result.get("rarity_score", 0) < 0.4,
+        "human_review_required": (
+            result.get("risk_of_being_common") == "high"
+            or result.get("rarity_score", 0) < 0.4
+        ),
     }
-
-    return rarity_record
