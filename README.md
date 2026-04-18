@@ -75,6 +75,10 @@ visual-intelligence-bot/
 ├── src/
 │   ├── ingest/           # source fetching, source record creation
 │   ├── interpret/        # two-pass pipeline
+│   ├── providers/        # LLM provider router (Anthropic, OpenAI, xAI, Ollama)
+│   ├── safety/           # hard-reject safety gate (two-tier: keyword + LLM)
+│   ├── scoring/          # rarity scorer
+│   ├── telegram/         # Telegram delivery
 │   ├── recurrence/       # cross-record comparison
 │   ├── obsidian_writer/  # markdown note generation
 │   └── archive_bridge/   # reads schemas/prompts from archive repo
@@ -91,7 +95,8 @@ visual-intelligence-bot/
 ├── data/
 │   ├── records/          # machine-readable interpretation records (.json)
 │   ├── sources/          # approved source registry + source records
-│   └── flags/            # human review flags and corrections
+│   └── flags/
+│       └── rejected/     # hard-reject and safety-uncertain rejection records (.json)
 └── scripts/
     └── ingest.py         # CLI entrypoint
 ```

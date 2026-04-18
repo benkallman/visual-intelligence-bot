@@ -31,6 +31,7 @@ import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import click
+from src.providers.config import validate_providers
 from src.ingest.source_registry import load_approved_sources, validate_source_url
 from src.ingest.source_record import create_source_record, save_source_record
 from src.interpret.pipeline import run_two_pass_pipeline
@@ -60,6 +61,13 @@ def ingest(source_url, source_id, title, artist, image_url, download_image, dry_
     """Ingest one art image through the two-pass interpretation pipeline."""
 
     click.echo(f"[ingest] Starting ingest for {source_id}: {source_url}")
+
+    # Startup: validate at least one provider is configured before any pipeline work
+    try:
+        validate_providers()
+    except RuntimeError as exc:
+        click.echo(f"[BLOCKED] Provider configuration error: {exc}", err=True)
+        sys.exit(1)
 
     # Step 1: Validate source
     approved_sources = load_approved_sources()
@@ -99,14 +107,20 @@ def ingest(source_url, source_id, title, artist, image_url, download_image, dry_
         )
         sys.exit(3)
 
-    # Pass 1 governance check
-    if not interpretation_record["pass1"].get("pass1_clean", False):
+    # Pass 1 governance check — do not overwrite an existing "error" status
+    if (
+        interpretation_record["governance"]["review_status"] != "error"
+        and not interpretation_record["pass1"].get("pass1_clean", False)
+    ):
         click.echo("[FLAG] Pass 1 is not clean. Record flagged for human review.", err=True)
         interpretation_record["governance"]["review_status"] = "flagged"
         interpretation_record["governance"]["flag_reason"] = "Pass 1 contains inference"
 
-    # Pass 2 governance check
-    if not interpretation_record["pass2"].get("prohibited_inference_check", {}).get("passed", False):
+    # Pass 2 governance check — do not overwrite an existing "error" status
+    if (
+        interpretation_record["governance"]["review_status"] != "error"
+        and not interpretation_record["pass2"].get("prohibited_inference_check", {}).get("passed", False)
+    ):
         click.echo("[FLAG] Prohibited inference detected. Record flagged for human review.", err=True)
         interpretation_record["governance"]["review_status"] = "flagged"
         violations = interpretation_record["pass2"].get("prohibited_inference_check", {}).get("violations", [])
@@ -141,8 +155,9 @@ def ingest(source_url, source_id, title, artist, image_url, download_image, dry_
     else:
         click.echo(f"[ingest] Rarity scorer error: {rarity_record.get('error')}", err=True)
 
-    # Step 9: Telegram (optional — does nothing if disabled)
-    if not dry_run and telegram_enabled():
+    # Step 9: Telegram (optional — does nothing if disabled or record is flagged/errored)
+    _current_status = interpretation_record["governance"]["review_status"]
+    if not dry_run and telegram_enabled() and _current_status not in ("flagged", "error"):
         sent = send_if_eligible(interpretation_record, rarity_record, source_record)
         if sent:
             click.echo("[ingest] Sent to Telegram.")
