@@ -107,6 +107,15 @@ def ingest(source_url, source_id, title, artist, image_url, download_image, dry_
         )
         sys.exit(3)
 
+    # Error gate — provider execution failed; do not continue downstream
+    if gov_status == "error":
+        click.echo(
+            "[ERROR] Provider execution failed (review_status=error). "
+            "Pipeline stopped — no recurrence, notes, scoring, or Telegram.",
+            err=True,
+        )
+        sys.exit(1)
+
     # Pass 1 governance check — do not overwrite an existing "error" status
     if (
         interpretation_record["governance"]["review_status"] != "error"

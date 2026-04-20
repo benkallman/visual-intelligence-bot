@@ -17,14 +17,41 @@ def write_image_note(interpretation_record: dict, source_record: dict) -> str:
     p2 = interpretation_record.get("pass2", {})
     gov = interpretation_record.get("governance", {})
 
+    def _element_line(e: dict | str) -> str:
+        if isinstance(e, str):
+            return f"- {e}"
+        label = (
+            e.get("element")
+            or e.get("name")
+            or e.get("item")
+            or e.get("label")
+            or e.get("description")
+            or "(unidentified element)"
+        )
+        location = e.get("location") or e.get("position") or e.get("placement") or "(unspecified)"
+        confidence = e.get("confidence") or e.get("certainty") or "(unspecified)"
+        return f"- **{label}** — {location} ({confidence})"
+
     elements_md = "\n".join(
-        f"- **{e['element']}** — {e['location']} ({e['confidence']})"
+        _element_line(e)
         for e in p1.get("elements", [])
+        if e
     )
 
+    def _symbolic_line(c: dict | str) -> str:
+        if isinstance(c, str):
+            return f"- `[SYMBOLIC-CANDIDATE]` {c}"
+        candidate = (
+            c.get("candidate") or c.get("symbol") or c.get("reading") or "(unspecified candidate)"
+        )
+        grounding = c.get("grounding") or c.get("evidence") or c.get("basis") or "(no grounding stated)"
+        confidence = c.get("confidence") or c.get("certainty") or "(unspecified)"
+        return f"- `[SYMBOLIC-CANDIDATE]` **{candidate}** — grounded in: *{grounding}* — confidence: {confidence}"
+
     symbolic_md = "\n".join(
-        f"- `[SYMBOLIC-CANDIDATE]` **{c['candidate']}** — grounded in: *{c['grounding']}* — confidence: {c['confidence']}"
+        _symbolic_line(c)
         for c in p2.get("symbolic_candidates", [])
+        if c
     ) or "None identified."
 
     recurrence_md = "\n".join(

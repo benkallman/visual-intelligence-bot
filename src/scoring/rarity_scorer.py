@@ -31,7 +31,23 @@ def run_rarity_scorer(interpretation_record: dict) -> dict:
 
     pass1 = interpretation_record.get("pass1", {})
     pass1_description = pass1.get("description", "")
-    key_elements = [e["element"] for e in pass1.get("elements", [])]
+    _ELEMENT_KEYS = ("element", "name", "item", "label", "description")
+
+    def _extract_label(entry) -> str | None:
+        if isinstance(entry, str):
+            return entry.strip() or None
+        if isinstance(entry, dict):
+            for k in _ELEMENT_KEYS:
+                v = entry.get(k)
+                if v and isinstance(v, str):
+                    return v.strip()
+        return None
+
+    key_elements = [
+        label
+        for e in pass1.get("elements", [])
+        if (label := _extract_label(e))
+    ]
     anomaly_types = []
 
     with open(CONSTRAINTS_PATH, "r", encoding="utf-8") as f:
@@ -49,6 +65,7 @@ def run_rarity_scorer(interpretation_record: dict) -> dict:
         system=f"{constraints}\n\n{scorer_prompt}",
         user_text=f"Score this image record:\n\n```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn valid JSON only.",
         max_tokens=512,
+        want_json=True,
     )
 
     try:
@@ -68,7 +85,23 @@ def run_rarity_scorer(interpretation_record: dict) -> dict:
             raw = raw[4:]
         raw = raw.strip()
 
-    result = json.loads(raw)
+    if not raw:
+        return {
+            "rarity_record_id": rarity_record_id,
+            "source_id": source_id,
+            "created_at": datetime.datetime.utcnow().isoformat() + "Z",
+            "error": "Model returned empty response",
+        }
+
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        return {
+            "rarity_record_id": rarity_record_id,
+            "source_id": source_id,
+            "created_at": datetime.datetime.utcnow().isoformat() + "Z",
+            "error": f"Invalid JSON from model: {exc}",
+        }
 
     return {
         "rarity_record_id": rarity_record_id,

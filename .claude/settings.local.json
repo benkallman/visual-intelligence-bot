@@ -6,7 +6,9 @@
       "Bash(git remote *)",
       "Bash(git branch *)",
       "Bash(git push *)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Bash(mkdir -p C:/visual-intelligence-bot/data/candidates C:/visual-intelligence-bot/src/discovery)",
+      "Bash(touch C:/visual-intelligence-bot/data/candidates/.gitkeep)"
     ]
   }
 }

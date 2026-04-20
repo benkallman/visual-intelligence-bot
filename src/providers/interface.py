@@ -8,6 +8,7 @@ class LLMRequest:
     user_text: str
     image_url: str | None = None
     max_tokens: int = 2048
+    want_json: bool = False
 
 
 @dataclass

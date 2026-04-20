@@ -26,6 +26,7 @@ def run_pass1(image_url: str) -> tuple[dict, str, str]:
         ),
         image_url=image_url,
         max_tokens=2048,
+        want_json=True,
     )
     response = complete(request)
 

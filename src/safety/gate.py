@@ -150,6 +150,23 @@ def _keyword_scan(text: str) -> list[str]:
     return [kw for kw in _KEYWORD_BLOCKLIST if kw in text]
 
 
+def _strip_code_fences(text: str) -> str:
+    """Remove markdown code fences, keeping only the inner content."""
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return stripped
+    # Remove opening fence line (``` or ```json or ```JSON …)
+    first_newline = stripped.find("\n")
+    if first_newline == -1:
+        # Single-line fence with no content
+        return ""
+    stripped = stripped[first_newline + 1:]
+    # Remove trailing fence
+    if stripped.endswith("```"):
+        stripped = stripped[: stripped.rfind("```")]
+    return stripped.strip()
+
+
 def _llm_classify(description: str, elements_text: str) -> GateResult:
     request = LLMRequest(
         system=_LLM_SYSTEM,
@@ -158,40 +175,51 @@ def _llm_classify(description: str, elements_text: str) -> GateResult:
             f"Key elements:\n{elements_text}"
         ),
         max_tokens=256,
+        want_json=True,
     )
 
     try:
         response = complete(request)
-    except ProviderUnavailableError:
+    except ProviderUnavailableError as exc:
         logger.error(
-            "Safety gate LLM unavailable — gate FAILS CLOSED (safety_uncertain)"
+            "Safety gate provider execution failed — gate FAILS CLOSED (safety_uncertain): %s",
+            exc,
         )
         return GateResult(
             safe=False,
             uncertain=True,
             matched_categories=[],
-            reason="LLM provider unavailable — gate fails closed. Human review required.",
+            reason="Provider execution failed — gate fails closed. Human review required.",
             tier="unavailable",
         )
 
-    raw = response.text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
+    raw = _strip_code_fences(response.text)
+
+    if not raw:
+        logger.error(
+            "Safety gate LLM returned empty output — gate FAILS CLOSED (safety_uncertain)"
+        )
+        return GateResult(
+            safe=False,
+            uncertain=True,
+            matched_categories=[],
+            reason="LLM returned empty output — gate fails closed. Human review required.",
+            tier="llm",
+        )
 
     try:
         result = json.loads(raw)
     except json.JSONDecodeError:
         logger.error(
-            "Safety gate LLM returned unparseable response — gate FAILS CLOSED"
+            "Safety gate LLM returned invalid JSON — gate FAILS CLOSED (safety_uncertain). "
+            "Raw response (first 200 chars): %r",
+            raw[:200],
         )
         return GateResult(
             safe=False,
             uncertain=True,
             matched_categories=[],
-            reason="Safety gate LLM response unparseable — gate fails closed.",
+            reason="LLM returned invalid JSON — gate fails closed. Human review required.",
             tier="llm",
         )
 
