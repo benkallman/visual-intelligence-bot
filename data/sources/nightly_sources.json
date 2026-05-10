@@ -1,0 +1,24 @@
+{
+  "sources": [
+    {
+      "label": "Baroque paintings",
+      "category_url": "https://commons.wikimedia.org/wiki/Category:Baroque_paintings",
+      "limit": 3
+    },
+    {
+      "label": "Paintings in the Rijksmuseum Amsterdam",
+      "category_url": "https://commons.wikimedia.org/wiki/Category:Paintings_in_the_Rijksmuseum_Amsterdam",
+      "limit": 3
+    },
+    {
+      "label": "17th-century paintings",
+      "category_url": "https://commons.wikimedia.org/wiki/Category:17th-century_paintings",
+      "limit": 3
+    },
+    {
+      "label": "Portrait paintings",
+      "category_url": "https://commons.wikimedia.org/wiki/Category:Portrait_paintings",
+      "limit": 3
+    }
+  ]
+}

@@ -18,6 +18,7 @@ import datetime
 import io
 import json
 import os
+import random
 import subprocess
 import sys
 
@@ -50,6 +51,7 @@ INGEST_SCRIPT = os.path.join(os.path.dirname(__file__), "ingest.py")
 _EXIT_LABEL = {0: "accepted", 2: "flagged", 3: "rejected"}
 
 DEFAULT_MAX_TOTAL = 20
+DEFAULT_MAX_SOURCES = int(os.environ.get("NIGHTLY_MAX_SOURCES", "2"))
 
 
 def _load_nightly_sources() -> list[dict]:
@@ -71,6 +73,7 @@ def _already_processed(source_id: str) -> bool:
     return any(
         os.path.isfile(path)
         for path in (
+            os.path.join(SOURCES_DIR, f"{source_id}.json"),
             os.path.join(RECORDS_DIR, f"{record_id}.json"),
             os.path.join(REJECTED_DIR, f"{rejection_id}.json"),
         )
@@ -270,20 +273,25 @@ def _sort_summary_items(items: list[dict]) -> list[dict]:
     return [item for _, item in indexed]
 
 
-def main(dry_run: bool, max_total: int) -> None:
+def main(dry_run: bool, max_total: int, max_sources: int) -> None:
     run_at = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
     date_str = datetime.date.today().isoformat()
 
     print(f"[nightly] Starting nightly run. date={date_str} dry_run={dry_run} max_total={max_total}")
 
     nightly_sources = _load_nightly_sources()
+    total_sources = len(nightly_sources)
+    random.shuffle(nightly_sources)
+    nightly_sources = nightly_sources[:max_sources]
+    print(f"[nightly] rotating sources: selected {len(nightly_sources)} of {total_sources}")
+
     approved = load_approved_sources()
 
     summary: dict = {
         "date": date_str,
         "run_at": run_at,
         "dry_run": dry_run,
-        "sources_configured": len(nightly_sources),
+        "sources_configured": total_sources,
         "sources_valid": 0,
         "candidates_discovered": 0,
         "skipped": 0,
@@ -297,6 +305,7 @@ def main(dry_run: bool, max_total: int) -> None:
 
     fallback_candidates: list[dict] = []
     total_processed = 0
+    new_candidates_count = 0
 
     for source_entry in nightly_sources:
         label = source_entry.get("label", "unlabeled")
@@ -352,7 +361,7 @@ def main(dry_run: bool, max_total: int) -> None:
             fallback_candidates.append(fallback_entry)
 
             if already_processed:
-                print(f"  SKIP {source_id} - already processed")
+                print(f"[nightly] skipping known source: {source_id}")
                 summary["skipped"] += 1
                 summary["items"].append({
                     "source_id": source_id,
@@ -362,6 +371,8 @@ def main(dry_run: bool, max_total: int) -> None:
                 })
                 fallback_entry["status"] = "skipped"
                 continue
+
+            new_candidates_count += 1
 
             if total_processed >= max_total:
                 continue
@@ -380,6 +391,9 @@ def main(dry_run: bool, max_total: int) -> None:
                 "exit_code": code,
             })
             total_processed += 1
+
+    if new_candidates_count == 0:
+        print("[nightly] no new candidates found — consider expanding sources")
 
     if summary["accepted"] == 0 and summary["errored"] == 0:
         fallback = _select_fallback_candidate(fallback_candidates)
@@ -421,5 +435,11 @@ if __name__ == "__main__":
         default=DEFAULT_MAX_TOTAL,
         help=f"Max candidates to process across all sources (default {DEFAULT_MAX_TOTAL})",
     )
+    parser.add_argument(
+        "--max-sources",
+        type=int,
+        default=DEFAULT_MAX_SOURCES,
+        help=f"Max sources to pull from per run, env NIGHTLY_MAX_SOURCES (default {DEFAULT_MAX_SOURCES})",
+    )
     args = parser.parse_args()
-    main(dry_run=args.dry_run, max_total=args.max_total)
+    main(dry_run=args.dry_run, max_total=args.max_total, max_sources=args.max_sources)
