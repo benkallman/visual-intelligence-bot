@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "public_digest_record",
+  "title": "PublicDigestRecord",
+  "description": "Public-facing digest assembled from accepted archive records.",
+  "type": "object",
+  "required": ["date", "title", "intro", "combined_score_formula", "items", "calls_to_action"],
+  "properties": {
+    "date": { "type": "string", "format": "date" },
+    "title": { "type": "string" },
+    "intro": { "type": "string" },
+    "combined_score_formula": { "type": "string" },
+    "items": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": [
+          "source_id",
+          "title",
+          "source",
+          "visible_elements",
+          "why_selected",
+          "source_url",
+          "combined_score",
+          "rarity_score",
+          "viral_score",
+          "brand_fit"
+        ],
+        "properties": {
+          "source_id": { "type": "string" },
+          "title": { "type": "string" },
+          "source": { "type": "string" },
+          "visible_elements": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "why_selected": { "type": "string" },
+          "source_url": { "type": "string" },
+          "combined_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "rarity_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "viral_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "brand_fit": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "calls_to_action": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 3,
+      "maxItems": 3
+    }
+  },
+  "additionalProperties": false
+}
