@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rarity_detection_record",
+  "title": "RarityDetectionRecord",
+  "description": "Archive-aware rarity evaluation for one image record.",
+  "type": "object",
+  "required": [
+    "rarity_detection_record_id",
+    "source_id",
+    "rarity_score",
+    "rarity_dimensions",
+    "rare_elements",
+    "common_elements",
+    "reason",
+    "confidence"
+  ],
+  "properties": {
+    "rarity_detection_record_id": { "type": "string" },
+    "source_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "provider": { "type": "string" },
+    "model": { "type": "string" },
+    "rarity_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "rarity_dimensions": {
+      "type": "object",
+      "required": [
+        "source_rarity",
+        "subject_rarity",
+        "composition_rarity",
+        "context_rarity",
+        "archive_rarity",
+        "motif_rarity"
+      ],
+      "properties": {
+        "source_rarity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "subject_rarity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "composition_rarity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "context_rarity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "archive_rarity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "motif_rarity": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "rare_elements": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "common_elements": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "reason": { "type": "string" },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "additionalProperties": false
+}
