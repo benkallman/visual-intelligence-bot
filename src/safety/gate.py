@@ -112,9 +112,7 @@ def run_safety_gate(pass1_result: dict) -> GateResult:
     is responsible for acting on the result.
     """
     description = pass1_result.get("description", "")
-    elements_text = " ".join(
-        e.get("element", "") for e in pass1_result.get("elements", [])
-    )
+    elements_text = " ".join(_iter_element_text(pass1_result.get("elements", [])))
     full_text = f"{description} {elements_text}".lower()
 
     # Tier 1: keyword scan
@@ -148,6 +146,23 @@ def run_safety_gate(pass1_result: dict) -> GateResult:
 
 def _keyword_scan(text: str) -> list[str]:
     return [kw for kw in _KEYWORD_BLOCKLIST if kw in text]
+
+
+def _iter_element_text(elements: object) -> list[str]:
+    if not isinstance(elements, list):
+        return []
+
+    extracted: list[str] = []
+    for item in elements:
+        if isinstance(item, dict):
+            text = item.get("element") or item.get("description") or ""
+            text = str(text).strip()
+            if text:
+                extracted.append(text)
+        elif isinstance(item, str) and item.strip():
+            extracted.append(item.strip())
+
+    return extracted
 
 
 def _strip_code_fences(text: str) -> str:
