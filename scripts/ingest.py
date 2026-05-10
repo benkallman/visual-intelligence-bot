@@ -37,6 +37,7 @@ from src.ingest.source_record import create_source_record, save_source_record
 from src.interpret.pipeline import run_two_pass_pipeline
 from src.recurrence.checker import run_recurrence_check
 from src.obsidian_writer.writer import write_image_note
+from src.scoring.rarity_detector import run_rarity_detector, save_rarity_detection_record
 from src.scoring.rarity_scorer import run_rarity_scorer
 from src.telegram import send_if_eligible, is_enabled as telegram_enabled
 
@@ -86,7 +87,7 @@ def ingest(source_url, source_id, title, artist, image_url, download_image, dry_
         image_url=image_url or source_url,
         title=title,
         artist=artist,
-        download_image=download_image,
+        download_image=True,
     )
 
     if not dry_run:
@@ -126,14 +127,13 @@ def ingest(source_url, source_id, title, artist, image_url, download_image, dry_
         interpretation_record["governance"]["flag_reason"] = "Pass 1 contains inference"
 
     # Pass 2 governance check — do not overwrite an existing "error" status
-    if (
-        interpretation_record["governance"]["review_status"] != "error"
-        and not interpretation_record["pass2"].get("prohibited_inference_check", {}).get("passed", False)
-    ):
-        click.echo("[FLAG] Prohibited inference detected. Record flagged for human review.", err=True)
-        interpretation_record["governance"]["review_status"] = "flagged"
-        violations = interpretation_record["pass2"].get("prohibited_inference_check", {}).get("violations", [])
-        interpretation_record["governance"]["flag_reason"] = f"{len(violations)} prohibited inference(s) found"
+    if interpretation_record["governance"]["review_status"] != "error":
+        _pic = interpretation_record["pass2"].get("prohibited_inference_check", {})
+        _violations = _pic.get("violations", [])
+        if not _pic.get("passed", False) and _violations:
+            click.echo("[FLAG] Prohibited inference detected. Record flagged for human review.", err=True)
+            interpretation_record["governance"]["review_status"] = "flagged"
+            interpretation_record["governance"]["flag_reason"] = f"{len(_violations)} prohibited inference(s) found"
 
     # Step 6: Recurrence check
     click.echo("[ingest] Running recurrence check...")
@@ -141,6 +141,19 @@ def ingest(source_url, source_id, title, artist, image_url, download_image, dry_
     interpretation_record["pass2"]["recurrence_references"] = recurrence_matches
     if recurrence_matches:
         click.echo(f"[ingest] Recurrence: {len(recurrence_matches)} match(es) found")
+
+    # Step 6b: Archive-aware rarity detection
+    click.echo("[ingest] Running rarity detector...")
+    rarity_detection_record = run_rarity_detector(interpretation_record, source_record)
+    if "error" not in rarity_detection_record:
+        click.echo(
+            f"[ingest] Rarity detection score: {rarity_detection_record.get('rarity_score', 0):.2f} "
+            f"(confidence={rarity_detection_record.get('confidence', 0):.2f})"
+        )
+        if not dry_run:
+            save_rarity_detection_record(rarity_detection_record)
+    else:
+        click.echo(f"[ingest] Rarity detector error: {rarity_detection_record.get('error')}", err=True)
 
     # Step 7: Save interpretation record + write Obsidian note
     if not dry_run:

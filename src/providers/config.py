@@ -25,6 +25,7 @@ class ProviderConfig:
 
         self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.ollama_model = os.getenv("OLLAMA_MODEL", "llava")
+        self.ollama_max_image_size = int(os.getenv("OLLAMA_MAX_IMAGE_SIZE", "512"))
 
 
 _instance: ProviderConfig | None = None

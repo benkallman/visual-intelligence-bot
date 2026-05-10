@@ -7,6 +7,7 @@ class LLMRequest:
     system: str
     user_text: str
     image_url: str | None = None
+    image_path: str | None = None
     max_tokens: int = 2048
     want_json: bool = False
 

@@ -24,6 +24,7 @@ SCHEMA_VERSION = "0.1.0"
 def run_two_pass_pipeline(source_record: dict) -> dict:
     record_id = source_record["source_id"].replace("src_", "rec_")
     image_url = source_record.get("image_url") or source_record["url"]
+    image_path = source_record.get("local_image_path")
 
     record = {
         "record_id": record_id,
@@ -47,7 +48,7 @@ def run_two_pass_pipeline(source_record: dict) -> dict:
 
     # Pass 1
     try:
-        pass1_result, provider, model = run_pass1(image_url)
+        pass1_result, provider, model = run_pass1(image_url, image_path=image_path)
     except ProviderUnavailableError as exc:
         record["governance"]["review_status"] = "error"
         record["governance"]["flag_reason"] = f"Provider unavailable: {exc}"

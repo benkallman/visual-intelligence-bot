@@ -1,14 +1,17 @@
 from __future__ import annotations
 import base64
-import io
 import logging
+import os
 import requests
-from PIL import Image
+import time
 from .interface import BaseProvider, LLMRequest, LLMResponse
 from .config import get_config
 
-_MAX_SIDE = 768
-_JPEG_QUALITY = 75
+# Timeouts are read once at import time so they appear in logs from the start.
+# Override via environment variables before starting the process.
+_TIMEOUT_IMAGE = int(os.environ.get("OLLAMA_IMAGE_TIMEOUT", "600"))  # seconds
+_TIMEOUT_TEXT = int(os.environ.get("OLLAMA_TEXT_TIMEOUT", "300"))    # seconds
+
 _IMAGE_HEADERS = {
     "User-Agent": "visual-intelligence-bot/0.1 (+https://github.com/benkallman/visual-intelligence-bot)"
 }
@@ -33,10 +36,24 @@ class OllamaProvider(BaseProvider):
 
         user_message: dict = {"role": "user", "content": request.user_text}
 
-        request_type = "image" if request.image_url else "text"
+        request_type = "image" if request.image_url or request.image_path else "text"
         image_transport: str | None = None
 
-        if request.image_url:
+        if request.image_path:
+            image_path = request.image_path
+            if not os.path.isabs(image_path):
+                image_path = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "..", "..", image_path)
+                )
+            with open(image_path, "rb") as f:
+                raw_bytes = f.read()
+            logger.debug(
+                "Image load: path=%s bytes=%d model=%s request_type=%s",
+                image_path, len(raw_bytes), model, request_type,
+            )
+            user_message["images"] = [base64.b64encode(raw_bytes).decode()]
+            image_transport = "local_file->base64"
+        elif request.image_url:
             img_resp = requests.get(request.image_url, headers=_IMAGE_HEADERS, timeout=30)
             content_type = img_resp.headers.get("Content-Type", "")
             if not content_type.startswith("image/"):
@@ -49,28 +66,11 @@ class OllamaProvider(BaseProvider):
                 )
             raw_bytes = img_resp.content
             logger.debug(
-                "Image download: url=%s content_type=%s original_bytes=%d model=%s request_type=%s",
+                "Image download fallback: url=%s content_type=%s bytes=%d model=%s request_type=%s",
                 request.image_url, content_type, len(raw_bytes), model, request_type,
             )
-            img = Image.open(io.BytesIO(raw_bytes))
-            if img.mode != "RGB":
-                img = img.convert("RGB")
-            w, h = img.size
-            if max(w, h) > _MAX_SIDE:
-                scale = _MAX_SIDE / max(w, h)
-                img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-            resized_w, resized_h = img.size
-            buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=_JPEG_QUALITY, optimize=True)
-            compressed_bytes = buf.getvalue()
-            logger.debug(
-                "Image preprocessed: original_bytes=%d resized=%dx%d compressed_bytes=%d "
-                "max_side=%d jpeg_quality=%d model=%s",
-                len(raw_bytes), resized_w, resized_h, len(compressed_bytes),
-                _MAX_SIDE, _JPEG_QUALITY, model,
-            )
-            user_message["images"] = [base64.b64encode(compressed_bytes).decode()]
-            image_transport = "url->resize->jpeg->base64"
+            user_message["images"] = [base64.b64encode(raw_bytes).decode()]
+            image_transport = "url->base64"
 
         payload = {
             "model": model,
@@ -85,6 +85,8 @@ class OllamaProvider(BaseProvider):
             payload["format"] = "json"
             payload["options"] = {"temperature": 0}
 
+        timeout = _TIMEOUT_IMAGE if request.image_url else _TIMEOUT_TEXT
+
         # Log request shape without raw image data
         debug_shape = {
             "model": model,
@@ -95,20 +97,25 @@ class OllamaProvider(BaseProvider):
             "want_json": request.want_json,
             "system_chars": len(request.system or ""),
             "user_text_chars": len(request.user_text or ""),
+            "timeout_seconds": timeout,
         }
         logger.debug("Ollama request shape: %s", debug_shape)
 
+        started_at = time.perf_counter()
         r = requests.post(
             f"{cfg.ollama_base_url}/api/chat",
             json=payload,
-            timeout=120,
+            timeout=timeout,
         )
+        inference_seconds = time.perf_counter() - started_at
+        if request_type == "image":
+            print(f"[timing] llava inference: {inference_seconds:.2f} seconds")
         if not r.ok:
             body_excerpt = r.text[:300].strip() if r.text else ""
             error_detail = (
                 f"Ollama HTTP {r.status_code} "
                 f"[model={model}, request_type={request_type}, "
-                f"image_transport={image_transport}]"
+                f"image_transport={image_transport}, timeout={timeout}s]"
             )
             if body_excerpt:
                 error_detail += f" | response: {body_excerpt}"
