@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "viral_score_record",
+  "title": "ViralScoreRecord",
+  "description": "Evaluation record for one accepted image's publishability and viral potential.",
+  "type": "object",
+  "required": ["viral_record_id", "source_id", "viral_score", "dimensions", "reason", "recommended_use"],
+  "properties": {
+    "viral_record_id": { "type": "string" },
+    "source_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "provider": { "type": "string" },
+    "model": { "type": "string" },
+    "viral_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "dimensions": {
+      "type": "object",
+      "required": [
+        "visual_hook",
+        "ambiguity",
+        "recognizability",
+        "novelty",
+        "caption_potential",
+        "shareability",
+        "brand_fit"
+      ],
+      "properties": {
+        "visual_hook": { "type": "number", "minimum": 0, "maximum": 1 },
+        "ambiguity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "recognizability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "novelty": { "type": "number", "minimum": 0, "maximum": 1 },
+        "caption_potential": { "type": "number", "minimum": 0, "maximum": 1 },
+        "shareability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "brand_fit": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "reason": { "type": "string" },
+    "recommended_use": {
+      "type": "string",
+      "enum": ["archive", "social", "prompt-pack", "study-page", "reject"]
+    }
+  },
+  "additionalProperties": false
+}
