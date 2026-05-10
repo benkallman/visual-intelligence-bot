@@ -165,6 +165,57 @@ python scripts/ingest.py --source-url "https://example.com/artwork" --source-id 
 
 ---
 
+## Nightly Run
+
+`scripts/nightly_run.py` runs a full discovery-to-ingest cycle from a controlled list of Wikimedia Commons category URLs.
+
+### Config
+
+Edit `data/sources/nightly_sources.json` to control which categories are pulled and how many items each contributes:
+
+```json
+{
+  "sources": [
+    {
+      "label": "Impressionist paintings",
+      "category_url": "https://commons.wikimedia.org/wiki/Category:Impressionist_paintings",
+      "limit": 5
+    }
+  ]
+}
+```
+
+Each `category_url` must match an active entry in `data/sources/approved_sources.json` or it will be skipped.
+
+### Usage
+
+```bash
+# Full run (default max 20 candidates)
+python scripts/nightly_run.py
+
+# Dry run — discover and score, write nothing
+python scripts/nightly_run.py --dry-run
+
+# Cap total candidates processed
+python scripts/nightly_run.py --max-total 5
+```
+
+### Output
+
+- `reports/nightly/YYYY-MM-DD-summary.json` — machine-readable run record
+- `reports/nightly/YYYY-MM-DD-summary.md` — human-readable digest
+- Interpretation records and Obsidian notes written by the existing ingest pipeline
+
+### Scheduling (Windows)
+
+Run manually until stable, then register with Task Scheduler:
+
+```
+schtasks /create /tn "VisualIntelligenceNightlyRun" /tr "python C:\visual-intelligence-bot\scripts\nightly_run.py --max-total 10" /sc DAILY /st 03:00 /f
+```
+
+---
+
 ## Archive Dependency
 
 This repo vendors a snapshot of schemas and prompts from `visual-intelligence-archive`.
