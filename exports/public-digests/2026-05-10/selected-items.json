@@ -1,0 +1,80 @@
+[
+  {
+    "source_id": "src_cc128ead65",
+    "title": "Coat of arms of Francisco García Guerra (cropped)",
+    "source": "Unknown author",
+    "visible_elements": [
+      "A shield with four quadrants.",
+      "A castle-like structure on the central part of the shield.",
+      "A ribbon with a laurel wreath and text."
+    ],
+    "why_selected": "Selected because it centers A shield with four quadrants, and it scores highest on motif rarity.",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Coat_of_arms_of_Francisco_Garc%C3%ADa_Guerra_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "combined_score": 0.405,
+    "rarity_score": 0.5,
+    "viral_score": 0.4,
+    "brand_fit": 0.2
+  },
+  {
+    "source_id": "src_e35c254183",
+    "title": "Coat of arms of Diego Osorio de Escobar (cropped)",
+    "source": "Unknown author",
+    "visible_elements": [
+      "A shield with four quarters.",
+      "A lion rampant on a shield.",
+      "A lion passant guardant."
+    ],
+    "why_selected": "Selected because it centers A shield with four quarters, and it scores highest on motif rarity.",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Coat_of_arms_of_Diego_Osorio_de_Escobar_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "combined_score": 0.405,
+    "rarity_score": 0.5,
+    "viral_score": 0.4,
+    "brand_fit": 0.2
+  },
+  {
+    "source_id": "src_a288e82b72",
+    "title": "Church of Nuestra Señora de la Asunción in Villamelendro de Valdavia 10 Annunciation",
+    "source": "Valdavia",
+    "visible_elements": [
+      "A woman seated on a throne-like structure, holding a book or scroll in her hands.",
+      "A bird perched above the central figure's head.",
+      "A cupid-like figure with wings at the bottom of the painting."
+    ],
+    "why_selected": "Selected because it centers A woman seated on a throne-like structure, holding a book or scroll in her hands, and it scores highest on motif rarity, and it fits the archive tone without forcing interpretation.",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/4/41/Church_of_Nuestra_Se%C3%B1ora_de_la_Asunci%C3%B3n_in_Villamelendro_de_Valdavia_10_Annunciation.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "combined_score": 0.375,
+    "rarity_score": 0.3,
+    "viral_score": 0.4,
+    "brand_fit": 0.5
+  },
+  {
+    "source_id": "src_d83b95d8b4",
+    "title": "Beato Barnaba Manassei da Terni (autore ignoto, dipinto del XVII secolo, chiesa di Santa Maria dell'Oro, Terni)",
+    "source": "manual_entry",
+    "visible_elements": [
+      "A man in religious attire holding a book or manuscript."
+    ],
+    "why_selected": "Selected because it centers A man in religious attire holding a book or manuscript, and it scores highest on source rarity, and it fits the archive tone without forcing interpretation.",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/5/50/Beato_Barnaba_Manassei_da_Terni_%28autore_ignoto%2C_dipinto_del_XVII_secolo%2C_chiesa_di_Santa_Maria_dell%27Oro%2C_Terni%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "combined_score": 0.36,
+    "rarity_score": 0.1,
+    "viral_score": 0.5,
+    "brand_fit": 0.7
+  },
+  {
+    "source_id": "src_1d4a5a099b",
+    "title": "Penitent Magdalene / Madalena Penitente",
+    "source": "Circle of Josefa de Óbidos (1630–1684)",
+    "visible_elements": [
+      "A figure that appears to be a woman with long hair, depicted in a three-quarter view. She is wearing a headpiece and a garment that suggests a historical or biblical context.",
+      "A small skull resting on what seems to be a surface or altar.",
+      "An open book with text, partially obscured by the figure."
+    ],
+    "why_selected": "Selected because it centers A figure that appears to be a woman with long hair, depicted in a three-quarter view. She is wearing a headpiece and a garment that suggests a historical or biblical context, and it scores highest on motif rarity, and it fits the archive tone without forcing interpretation.",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/5/55/Circle_of_Josefa_de_%C3%93bidos_%E2%80%93_Penitent_Magdalene_%E2%80%93_c._1665%E2%80%931680_%E2%80%93_Oil_on_copper.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "combined_score": 0.3475,
+    "rarity_score": 0.2,
+    "viral_score": 0.45,
+    "brand_fit": 0.5
+  }
+]
