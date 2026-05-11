@@ -9,6 +9,8 @@ import json
 import os
 from typing import Any
 
+from src.archive.loader import get_archive_context_for_prompt
+from src.motifs.memory import get_motif_memory_summary
 from src.providers import complete, LLMRequest
 
 PROMPT_PATH = os.path.join(
@@ -230,11 +232,25 @@ def _fallback_pass2(reason: str, raw_text: str) -> dict:
 def run_pass2(pass1_output: dict) -> tuple[dict, str, str]:
     with open(PROMPT_PATH, "r", encoding="utf-8") as f:
         system_prompt = f.read()
+    reference_bits = [
+        pass1_output.get("description", ""),
+        pass1_output.get("composition_notes", ""),
+        *(item.get("element", "") for item in pass1_output.get("elements", []) if isinstance(item, dict)),
+    ]
+    archive_context = get_archive_context_for_prompt(reference_bits)
+    motif_memory_summary = get_motif_memory_summary(reference_bits)
 
     request = LLMRequest(
         system=system_prompt,
         user_text=(
             f"Here is the Pass 1 record:\n\n```json\n{json.dumps(pass1_output, indent=2)}\n```\n\n"
+            "Here is archive reference context from visual-intelligence-archive. "
+            "Use it only as contextual framing. Do not treat it as evidence that overrides the image-grounded Pass 1 record.\n\n"
+            f"```json\n{json.dumps(archive_context, indent=2)}\n```\n\n"
+            "Here is motif memory from prior ingests. Use it only as weak contextual memory. "
+            "It must not override Pass 1. You may mention recurrence only when it is grounded in visible elements from Pass 1, "
+            "not from motif memory alone. Do not claim symbolic certainty.\n\n"
+            f"```json\n{json.dumps(motif_memory_summary, indent=2)}\n```\n\n"
             "Produce a Pass 2 constrained interpretation. "
             "Return valid JSON only, conforming to the pass2 section of the interpretation record schema."
         ),

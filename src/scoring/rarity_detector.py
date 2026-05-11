@@ -10,6 +10,7 @@ import os
 import re
 from urllib.parse import urlparse
 
+from src.motifs.memory import get_motif_memory_summary
 from src.providers import complete, LLMRequest, ProviderUnavailableError
 
 PROMPT_PATH = os.path.join(
@@ -250,6 +251,13 @@ def _build_payload(interpretation_record: dict, source_record: dict) -> tuple[di
             *new_elements,
         ]
     )
+    motif_memory_summary = get_motif_memory_summary(
+        [
+            interpretation_record.get("pass1", {}).get("description", ""),
+            interpretation_record.get("pass1", {}).get("composition_notes", ""),
+            *new_elements,
+        ]
+    )
     payload = {
         "source_metadata": {
             "source_id": current_source_id,
@@ -270,6 +278,7 @@ def _build_payload(interpretation_record: dict, source_record: dict) -> tuple[di
         "recurrence_matches": recurrence_refs,
         "motif_matches": motif_hits,
         "archive_context_summary": archive_context_summary,
+        "motif_memory_summary": motif_memory_summary,
     }
     return payload, rare_elements[:5], common_elements[:5]
 
@@ -289,7 +298,8 @@ def run_rarity_detector(interpretation_record: dict, source_record: dict) -> dic
         user_text=(
             "Evaluate rarity for this record. Archive context summary is optional reference material only. "
             "It may influence motif_rarity and archive-level framing, but it must not override the pass1 literal "
-            "description or other image-grounded evidence.\n\n"
+            "description or other image-grounded evidence. Motif memory is also optional reference material only; "
+            "use it to compare against motif counts and rarity patterns, not to invent motifs or certainty.\n\n"
             f"```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn valid JSON only."
         ),
         max_tokens=700,

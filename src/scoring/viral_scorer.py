@@ -8,6 +8,8 @@ import datetime
 import json
 import os
 import re
+
+from src.motifs.memory import get_motif_memory_summary
 from src.providers import complete, LLMRequest, ProviderUnavailableError
 
 PROMPT_PATH = os.path.join(
@@ -153,6 +155,14 @@ def run_viral_scorer(interpretation_record: dict, source_record: dict, rarity_re
                 *(key_elements or []),
             ]
         ),
+        "motif_memory_summary": get_motif_memory_summary(
+            [
+                pass1.get("description", ""),
+                pass1.get("composition_notes", ""),
+                pass2.get("interpretive_notes", ""),
+                *(key_elements or []),
+            ]
+        ),
     }
 
     request = LLMRequest(
@@ -160,7 +170,9 @@ def run_viral_scorer(interpretation_record: dict, source_record: dict, rarity_re
         user_text=(
             "Score this accepted image record. Archive context summary is optional reference material only. "
             "It may influence brand_fit, motif framing, and recommended_use, but it must not override the pass1 "
-            "literal description or other image-grounded evidence.\n\n"
+            "literal description or other image-grounded evidence. Motif memory is only a weak signal; use common or "
+            "high-viral motifs as light contextual cues for brand_fit and recommended_use, not as proof that the current "
+            "image shares those properties.\n\n"
             f"```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn valid JSON only."
         ),
         max_tokens=512,
