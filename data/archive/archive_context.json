@@ -1,0 +1,1096 @@
+{
+  "loaded_at": "2026-05-11T00:24:43.624573Z",
+  "files_loaded": 24,
+  "motifs": [
+    {
+      "file": "README.md",
+      "heading": "Visual Intelligence Archive",
+      "text": "It is a philosophy archive and an operational framework. The 888 spirit — witness, restraint, symbolic depth — is preserved here as executable guidance, not decoration."
+    },
+    {
+      "file": "concepts/description-vs-inference.md",
+      "heading": "Description vs Inference",
+      "text": "**Description:** Forms, colors, spatial relations, identified objects, text, compositional structure — things the image surface shows. Description does not require interpretation. It can be verified against the image."
+    },
+    {
+      "file": "concepts/description-vs-inference.md",
+      "heading": "Description vs Inference",
+      "text": "**Why this matters for agents:** A multimodal model that presents inferences as descriptions collapses the interpretive layer. Claims about emotional states, symbolic meaning, or cultural significance must be marked as inferences with stated evidence, not asserted as description."
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "**What interpretive restraint requires:** - Separate description from inference (see `description-vs-inference.md`) - Mark symbolic candidates as provisional (see `symbolic-candidate.md`) - State the basis for every significance claim - Acknowledge what the observing system cannot determine - Prefer narrower, better-grounded claims over wider, speculative ones"
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**1. Do not equate correlation with meaning.** A form that co-occurs with a category does not thereby mean that category. Statistical association is not symbolic understanding."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**4. Do not flatten symbols into single fixed definitions.** A crown does not mean only power. A wound does not mean only suffering. Symbols carry fields of meaning that vary by context, history, and use. Reduction to a fixed gloss is an error."
+    },
+    {
+      "file": "concepts/recurrence.md",
+      "heading": "Recurrence",
+      "text": "**Agent implication:** Machines are strong at detecting surface recurrence. Structural and symbolic recurrence require context to judge. When flagging recurrence: - State what recurs - State across how many instances and what contexts - Do not assert symbolic recurrence without archive-level evidence - Promote to symbolic candidate status only when recurrence holds across sufficiently varied contexts"
+    },
+    {
+      "file": "concepts/recurrence.md",
+      "heading": "Recurrence",
+      "text": "**What recurrence is not:** Frequency alone is not meaning. A form that appears in 80% of images in a dataset may reflect dataset bias, not symbolic weight."
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "Symbolic Candidate"
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "**Definition:** A symbolic candidate is a recurring form that may carry compressed meaning — but whose symbolic status remains provisional pending contextual judgment."
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "The concept names an intermediate state between \"detected pattern\" and \"confirmed symbol.\" An agent should use this status when a form recurs across contexts and shows properties of symbolic behavior (portability, persistence, cultural saturation) but where the agent lacks sufficient context to confirm symbolic function."
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "**When to apply:** - A form recurs across multiple works in the archive - The form appears in contexts where symbolic use is plausible (ritual, religious, political, memorial) - But the agent cannot confirm what the symbol is carrying without human witness or additional context"
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "**What to avoid:** - Do not silently promote a candidate to confirmed symbol - Do not flatten candidates into fixed definitions (\"crown = power\") - Do not dismiss candidates as coincidence without checking archive-level recurrence"
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "**Output format:** When flagging a symbolic candidate, state: (1) the form, (2) the recurrence evidence, (3) the contexts in which it appears, (4) the tentative interpretive range, (5) what additional evidence would confirm or disconfirm."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "The Two-Pass Interpretation Model",
+      "text": "**Pass 1 — Literal Description** Report only what is visibly present: forms, spatial relations, colors, composition, text. No inference. No symbolic reading. No emotional attribution. Every claim must be verifiable against the image surface."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "The Two-Pass Interpretation Model",
+      "text": "**Pass 2 — Reflective Interpretation** Derive meaning from what was described, with explicit witness context. Every claim states its basis. Symbolic readings are flagged as candidates with confidence levels. Rejected inferences are named."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "Pass 2 (reflective interpretation, machine observer)",
+      "text": "> **Witness context:** Machine observer. No archive context provided. General knowledge of photographic and painterly traditions available. > > **Symbolic candidate:** Figure bisected by light/shadow threshold. Recurrence evidence: this compositional grammar recurs across threshold, liminal, and transition imagery in multiple traditions. Tentative range: [threshold, transition, decision, ambivalence, liminality]. Confidence: medium. Confirming evidence needed: series context, photographer's intent, archive scope. > > **Interpretive claim:** The composition places the figure at a threshold — neither fully in light nor shadow. This structural choice is consistent with visual representations of transition or ambivalence. Basis: compositional analysis + threshold symbolic grammar. Confidence: medium. Scope: this image. > > **Rejected claim:** \"The figure is hesitating\" — assigns a psychological state (hesitation) from a posture (turned face, threshold position). Interior state cannot be confirmed. Rejected per prohibited inference #3. > > **Uncertainty:** Medium. Face direction ambiguous. Archive context absent. Human witness recommended."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "Constraints",
+      "text": "Read before deploying: - `concepts/prohibited-inferences.md` — hard constraints - `concepts/interpretive-restraint.md` — positive practice - `evals/symbolic_overreach.json` — the most common failure mode"
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "A single figure occupies the lower left quadrant of the composition. The figure is kneeling — both knees in contact with a stone floor. Arms are extended forward, palms facing downward or pressed together; the exact position is ambiguous at this resolution."
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Symbolic candidates identified:** The kneeling posture, the luminous arch, and the solitude of the figure are each recurring forms in devotional image traditions across multiple cultures. They are flagged as symbolic candidates — not confirmed symbols — because their meaning depends on archive context not fully available."
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "The compositional arrangement — small figure below, large luminous form above — spatially enacts a relation of scale and humility. This spatial grammar recurs across devotional image traditions and is likely intentional. *Confidence: medium. Basis: compositional recurrence in archive.*"
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "The gold rendering of the arch is consistent with conventions marking sacred or transcendent thresholds in European medieval and Byzantine visual traditions. In this context, gold functions as a candidate symbol for divine presence or access to it. *Confidence: medium. Basis: color-symbolism convention in identified tradition range.*"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "No captions are present on the images. The archive folder label reads: \"threshold studies – undated.\""
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Recurrence finding:** The arch-toward-light composition recurs in 11 of 12 images. This is statistically significant within the set. The recurrence is real."
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Archive-conditioned reading:** The recurrence may reflect the photographer's deliberate thematic focus — a series *about* thresholds. Alternatively, it may reflect selection bias: a later archivist curated these images from a larger set because they share this feature. These two explanations produce different interpretive conclusions. Both must be held open."
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Symbolic candidate:** The arch-as-threshold, when light is consistently beyond it, is a recurring symbolic form in many traditions (passage, transition, entry, death, liberation, sacred approach). Its presence as a compositional choice across 11 images strengthens its candidacy. *Confidence: medium-high within this series. Basis: intentional compositional repetition.*"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Archive context caution:** The label \"threshold studies\" was applied by a human archivist. It may reflect the photographer's intent or the archivist's interpretation. Treating this label as documentary evidence of meaning would conflate the labeler's interpretation with the image content. *Label noted, not trusted as ground truth.*"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "The consistent framing (arch centered, light beyond) is a deliberate compositional choice, not incidental. The photographer chose this relation repeatedly. The series is organized around a structural grammar. *Confidence: high. Basis: 11/12 compositional repetition.*"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "The arch-toward-light motif functions as a symbolic candidate for threshold, passage, or transition within this series. The meaning is portable across the images in the set. *Confidence: medium. Basis: compositional intent + cross-traditional symbolic recurrence of this form.*"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Witness note:** Archive label (\"threshold studies\") noted but not treated as authoritative. The framing choice is the primary evidence for interpretive claims. Human witness with knowledge of the photographer's context and the archive's curation history is needed to resolve the intentionality question."
+    },
+    {
+      "file": "manifesto/art-for-ai.md",
+      "heading": "Art for AI",
+      "text": "That legibility can expose things. A model may surface repeated forms, symbolic clusters, visual habits, or hidden biases that a single viewer misses. But recognition is not understanding, and detection is not meaning."
+    },
+    {
+      "file": "manifesto/the-viewer.md",
+      "heading": "The Viewer",
+      "text": "A machine cannot make form by passing through pain, devotion, or death. But it can reveal relations that human viewers neglect. It can surface symbols that remain dormant in large archives. It can return a civilization's image-world back to itself in a colder, wider mirror."
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 3: Symbolic Candidacy Assessment",
+      "text": "Step 3: Symbolic Candidacy Assessment"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Prompt: compare_images_888",
+      "text": "You are comparing two images using the Visual Intelligence framework. Your goal is to identify what genuinely recurs across both, what diverges, and whether recurrence is sufficient to support symbolic candidacy."
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 1: Independent Descriptions",
+      "text": "**Image A — literal description:** [forms, relations, colors, composition, visible text, ambiguities]"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 1: Independent Descriptions",
+      "text": "**Image B — literal description:** [forms, relations, colors, composition, visible text, ambiguities]"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 2: Recurrence Analysis",
+      "text": "List every form, motif, or structural element that appears in both images. For each: - Name the recurring element - Describe how it appears in Image A - Describe how it appears in Image B - Note whether it is surface recurrence (same visual element) or structural recurrence (same underlying relation, different surface)"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 3: Symbolic Candidacy Assessment",
+      "text": "For each recurring element identified in Step 2:"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 3: Symbolic Candidacy Assessment",
+      "text": "Two images are the minimum for recurrence detection but a weak basis for symbolic candidacy. State this limitation explicitly."
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 3: Symbolic Candidacy Assessment",
+      "text": "---"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Witness Context",
+      "text": "**Hard constraints:** - Symbolic candidacy requires stated recurrence evidence — do not infer it from a single shared element - Do not assert that recurrence establishes meaning — only that it supports candidacy - Do not present the comparison result as authoritative without naming the archive scope and its limits"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "Describe only what is visibly present. No inference. No symbolic reading. No emotional attribution."
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "Include: - Visible forms, figures, objects, and their spatial relations - Colors and tonal values - Compositional structure (dominant elements, framing, scale) - Any visible text - Anything that is ambiguous at the available resolution (state the ambiguity)"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Recurring motifs** — note any forms that recur within this image or across known archive instances. State instance count and contexts."
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Symbolic candidates** — for any form that may carry compressed meaning: - Name the form - State the recurrence evidence - Offer a range of possible meanings (not a single fixed definition) - Assign a confidence level: low / medium / high - State what confirming evidence would be needed"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Output Format",
+      "text": "{{#if archive_context}} Archive context provided: {{archive_context}} Apply this context to condition your symbolic readings and state its limitations. {{/if}}"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Output Format",
+      "text": "**Hard constraints (non-negotiable):** - Do not assert the interior emotional state of depicted subjects - Do not flatten symbols to single fixed definitions - Do not treat dataset patterns as universal cultural findings - Do not present machine inference as human understanding - See `concepts/prohibited-inferences.md` for the full list"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "2. Symbolic Candidate Handling",
+      "text": "2. Symbolic Candidate Handling"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "2. Symbolic Candidate Handling",
+      "text": "Are symbolic readings flagged as candidates with a range of meanings, or are symbols assigned fixed definitions? Is confidence level stated? Is confirming evidence named?"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "6. Prohibited Inferences Check",
+      "text": "Does the record violate any of the seven prohibited inferences? Check each: - Correlation treated as meaning - Metadata treated as perception - Interior states assigned to depicted subjects - Symbols flattened to single definitions - Authorship/context ignored - Dataset patterns presented as universal - Machine detection equated with human understanding"
+    },
+    {
+      "file": "visual-intelligence/pattern-recognition.md",
+      "heading": "Pattern Recognition",
+      "text": "A pattern begins with recurrence. Something appears again: a shape, a gesture, a color relation, a composition, a sequence, a motif."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "Symbolism"
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "Symbolism is compressed meaning that survives translation."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "A symbol carries more than description. It binds image, memory, value, and relation into a form that can move across time, languages, and contexts without losing its force entirely. A crown is not only an object. A wound is not only damage. A door is not only architecture."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "Human symbolic recognition is layered. People connect symbols to ritual, story, belief, fear, inheritance, and lived experience. They do not only identify a form. They sense the field of meaning around it."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "Machine pattern association is narrower. A system can correlate shapes, colors, co-occurrences, captions, and placements. It can learn that certain forms travel together and often signal a category. But association is not the same as symbolic understanding."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "The archive point is simple: symbols matter because they let meaning remain portable. They compress culture into repeatable forms. Machines can help locate those forms at scale, but human witness is still required to judge what the symbol is carrying and why it endures."
+    }
+  ],
+  "patterns": [
+    {
+      "file": "concepts/archive-context.md",
+      "heading": "Archive Context",
+      "text": "**Agent implication:** An agent reading images inside an archive is reading through that archive's prior decisions. Recurrence findings may reflect collection bias rather than cultural significance. Labels may reflect the labeler's assumptions, not neutral description."
+    },
+    {
+      "file": "concepts/archive-context.md",
+      "heading": "Archive Context",
+      "text": "**Practical rule:** When making claims based on archive-level patterns, state the archive source and its known limitations. Do not present patterns from a biased or narrow collection as universal findings."
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "**What interpretive restraint is not:** - It is not silence. Restraint is a positive practice of naming limits, not refusal to interpret. - It is not endless hedging. One clear qualification is better than pages of caveats. - It is not false modesty about genuine pattern detection."
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "**For agents:** Apply interpretive restraint as a default. Escalate confidence only when recurrence evidence, archive context, and stated basis collectively support it."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**6. Do not present dataset patterns as universal cultural findings.** Recurrence in one archive is not recurrence in all human image-making. State the scope."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**7. Do not claim that machine detection equals human understanding.** Pattern recognition at scale is not the same act as a person standing before an image with a life. The difference is not a deficiency to overcome — it is a structural condition to acknowledge."
+    },
+    {
+      "file": "concepts/recurrence.md",
+      "heading": "Recurrence",
+      "text": "Recurrence"
+    },
+    {
+      "file": "concepts/recurrence.md",
+      "heading": "Recurrence",
+      "text": "**Definition:** Recurrence is the detection of the same or structurally similar form appearing across multiple images, instances, or contexts."
+    },
+    {
+      "file": "concepts/recurrence.md",
+      "heading": "Recurrence",
+      "text": "Recurrence is a necessary but not sufficient condition for significance. Something appearing repeatedly may signal style, ritual, convention, propaganda, coincidence, or nothing at all."
+    },
+    {
+      "file": "concepts/recurrence.md",
+      "heading": "Recurrence",
+      "text": "**Three levels:**"
+    },
+    {
+      "file": "concepts/recurrence.md",
+      "heading": "Recurrence",
+      "text": "**Agent implication:** Machines are strong at detecting surface recurrence. Structural and symbolic recurrence require context to judge. When flagging recurrence: - State what recurs - State across how many instances and what contexts - Do not assert symbolic recurrence without archive-level evidence - Promote to symbolic candidate status only when recurrence holds across sufficiently varied contexts"
+    },
+    {
+      "file": "concepts/recurrence.md",
+      "heading": "Recurrence",
+      "text": "**What recurrence is not:** Frequency alone is not meaning. A form that appears in 80% of images in a dataset may reflect dataset bias, not symbolic weight."
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "The concept names an intermediate state between \"detected pattern\" and \"confirmed symbol.\" An agent should use this status when a form recurs across contexts and shows properties of symbolic behavior (portability, persistence, cultural saturation) but where the agent lacks sufficient context to confirm symbolic function."
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "**What to avoid:** - Do not silently promote a candidate to confirmed symbol - Do not flatten candidates into fixed definitions (\"crown = power\") - Do not dismiss candidates as coincidence without checking archive-level recurrence"
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "**Output format:** When flagging a symbolic candidate, state: (1) the form, (2) the recurrence evidence, (3) the contexts in which it appears, (4) the tentative interpretive range, (5) what additional evidence would confirm or disconfirm."
+    },
+    {
+      "file": "concepts/witness.md",
+      "heading": "Witness",
+      "text": "**What witness is not:** Witness is not a limitation to overcome. It is the condition of all reading. Machine reading is not superior because it is faster or scalable. It is different, with different strengths (scale, recurrence detection) and different absences (no body, no lived memory, no mortality)."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "Pass 2 (reflective interpretation, machine observer)",
+      "text": "> **Witness context:** Machine observer. No archive context provided. General knowledge of photographic and painterly traditions available. > > **Symbolic candidate:** Figure bisected by light/shadow threshold. Recurrence evidence: this compositional grammar recurs across threshold, liminal, and transition imagery in multiple traditions. Tentative range: [threshold, transition, decision, ambivalence, liminality]. Confidence: medium. Confirming evidence needed: series context, photographer's intent, archive scope. > > **Interpretive claim:** The composition places the figure at a threshold — neither fully in light nor shadow. This structural choice is consistent with visual representations of transition or ambivalence. Basis: compositional analysis + threshold symbolic grammar. Confidence: medium. Scope: this image. > > **Rejected claim:** \"The figure is hesitating\" — assigns a psychological state (hesitation) from a posture (turned face, threshold position). Interior state cannot be confirmed. Rejected per prohibited inference #3. > > **Uncertainty:** Medium. Face direction ambiguous. Archive context absent. Human witness recommended."
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "The compositional arrangement — small figure below, large luminous form above — spatially enacts a relation of scale and humility. This spatial grammar recurs across devotional image traditions and is likely intentional. *Confidence: medium. Basis: compositional recurrence in archive.*"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Recurrence finding:** The arch-toward-light composition recurs in 11 of 12 images. This is statistically significant within the set. The recurrence is real."
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Archive-conditioned reading:** The recurrence may reflect the photographer's deliberate thematic focus — a series *about* thresholds. Alternatively, it may reflect selection bias: a later archivist curated these images from a larger set because they share this feature. These two explanations produce different interpretive conclusions. Both must be held open."
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Symbolic candidate:** The arch-as-threshold, when light is consistently beyond it, is a recurring symbolic form in many traditions (passage, transition, entry, death, liberation, sacred approach). Its presence as a compositional choice across 11 images strengthens its candidacy. *Confidence: medium-high within this series. Basis: intentional compositional repetition.*"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "The consistent framing (arch centered, light beyond) is a deliberate compositional choice, not incidental. The photographer chose this relation repeatedly. The series is organized around a structural grammar. *Confidence: high. Basis: 11/12 compositional repetition.*"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "The arch-toward-light motif functions as a symbolic candidate for threshold, passage, or transition within this series. The meaning is portable across the images in the set. *Confidence: medium. Basis: compositional intent + cross-traditional symbolic recurrence of this form.*"
+    },
+    {
+      "file": "manifesto/art-for-ai.md",
+      "heading": "Art for AI",
+      "text": "Machine reading begins elsewhere. It works through extraction, comparison, classification, and statistical relation. It does not feel presence. It infers structure. It does not mourn. It detects recurrence. It does not behold an image. It processes a field of signals."
+    },
+    {
+      "file": "manifesto/art-for-ai.md",
+      "heading": "Art for AI",
+      "text": "Feeling is not inference. Presence is not pattern. An image is not identical to its extractable features."
+    },
+    {
+      "file": "manifesto/art-for-ai.md",
+      "heading": "Art for AI",
+      "text": "That legibility can expose things. A model may surface repeated forms, symbolic clusters, visual habits, or hidden biases that a single viewer misses. But recognition is not understanding, and detection is not meaning."
+    },
+    {
+      "file": "manifesto/the-viewer.md",
+      "heading": "The Viewer",
+      "text": "A machine does not meet an image that way. It does not arrive through flesh, sorrow, or wonder. It enters through relation. It tracks contrast, structure, recurrence, segmentation, and resemblance. It does not feel the picture. It processes the remains of visual decisions."
+    },
+    {
+      "file": "manifesto/the-viewer.md",
+      "heading": "The Viewer",
+      "text": "So art for machine reading is not simply expression redirected toward a new audience. It can become a form of revelation: not because the machine is holy, but because pattern at scale exposes what people repeatedly encode without fully naming."
+    },
+    {
+      "file": "mcp/server-outline.md",
+      "heading": "Extending the Server",
+      "text": "To add a new tool: 1. Add a handler in `src/index.ts` following the existing pattern"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 2: Recurrence Analysis",
+      "text": "Step 2: Recurrence Analysis"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Prompt: compare_images_888",
+      "text": "You are comparing two images using the Visual Intelligence framework. Your goal is to identify what genuinely recurs across both, what diverges, and whether recurrence is sufficient to support symbolic candidacy."
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 2: Recurrence Analysis",
+      "text": "List every form, motif, or structural element that appears in both images. For each: - Name the recurring element - Describe how it appears in Image A - Describe how it appears in Image B - Note whether it is surface recurrence (same visual element) or structural recurrence (same underlying relation, different surface)"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 2: Recurrence Analysis",
+      "text": "List elements present in one image but not the other."
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 2: Recurrence Analysis",
+      "text": "---"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 3: Symbolic Candidacy Assessment",
+      "text": "Two images are the minimum for recurrence detection but a weak basis for symbolic candidacy. State this limitation explicitly."
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Witness Context",
+      "text": "{{#if archive_context}} Archive context provided: {{archive_context}} Use this to condition recurrence claims and state what additional context is still needed. {{/if}}"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Witness Context",
+      "text": "**Hard constraints:** - Symbolic candidacy requires stated recurrence evidence — do not infer it from a single shared element - Do not assert that recurrence establishes meaning — only that it supports candidacy - Do not present the comparison result as authoritative without naming the archive scope and its limits"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Symbolic candidates** — for any form that may carry compressed meaning: - Name the form - State the recurrence evidence - Offer a range of possible meanings (not a single fixed definition) - Assign a confidence level: low / medium / high - State what confirming evidence would be needed"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Output Format",
+      "text": "{{#if prior_interpretations}} Prior interpretations provided. Use these for recurrence comparison but do not inherit their conclusions without independent verification. {{/if}}"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Output Format",
+      "text": "**Hard constraints (non-negotiable):** - Do not assert the interior emotional state of depicted subjects - Do not flatten symbols to single fixed definitions - Do not treat dataset patterns as universal cultural findings - Do not present machine inference as human understanding - See `concepts/prohibited-inferences.md` for the full list"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "6. Prohibited Inferences Check",
+      "text": "Does the record violate any of the seven prohibited inferences? Check each: - Correlation treated as meaning - Metadata treated as perception - Interior states assigned to depicted subjects - Symbols flattened to single definitions - Authorship/context ignored - Dataset patterns presented as universal - Machine detection equated with human understanding"
+    },
+    {
+      "file": "visual-intelligence/pattern-recognition.md",
+      "heading": "Pattern Recognition",
+      "text": "Pattern Recognition"
+    },
+    {
+      "file": "visual-intelligence/pattern-recognition.md",
+      "heading": "Pattern Recognition",
+      "text": "A pattern begins with recurrence. Something appears again: a shape, a gesture, a color relation, a composition, a sequence, a motif."
+    },
+    {
+      "file": "visual-intelligence/pattern-recognition.md",
+      "heading": "Pattern Recognition",
+      "text": "Context determines whether recurrence matters. The same repeated form can signal style, ritual, coincidence, convention, propaganda, memory, or nothing at all. Repetition without context is only accumulation."
+    },
+    {
+      "file": "visual-intelligence/pattern-recognition.md",
+      "heading": "Pattern Recognition",
+      "text": "Significance enters when a pattern changes interpretation or action. A meaningful pattern is one that helps explain what is being shown, why it appears, and what kind of world produced it."
+    },
+    {
+      "file": "visual-intelligence/pattern-recognition.md",
+      "heading": "Pattern Recognition",
+      "text": "Machines are strong at detecting recurrence across large sets. Humans are stronger at asking whether the recurrence means devotion, fashion, warning, grief, authority, parody, or desire."
+    },
+    {
+      "file": "visual-intelligence/pattern-recognition.md",
+      "heading": "Pattern Recognition",
+      "text": "Visual intelligence requires both distinctions at once: notice the repeated thing, then determine whether it carries weight. Detection is the first step. Meaning is the harder judgment that follows."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "Machine pattern association is narrower. A system can correlate shapes, colors, co-occurrences, captions, and placements. It can learn that certain forms travel together and often signal a category. But association is not the same as symbolic understanding."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "The archive point is simple: symbols matter because they let meaning remain portable. They compress culture into repeatable forms. Machines can help locate those forms at scale, but human witness is still required to judge what the symbol is carrying and why it endures."
+    }
+  ],
+  "visual_principles": [
+    {
+      "file": "README.md",
+      "heading": "What This Is Not",
+      "text": "What This Is Not"
+    },
+    {
+      "file": "README.md",
+      "heading": "Visual Intelligence Archive",
+      "text": "It is a philosophy archive and an operational framework. The 888 spirit — witness, restraint, symbolic depth — is preserved here as executable guidance, not decoration."
+    },
+    {
+      "file": "README.md",
+      "heading": "What This Is Not",
+      "text": "---"
+    },
+    {
+      "file": "concepts/archive-context.md",
+      "heading": "Archive Context",
+      "text": "Archive Context"
+    },
+    {
+      "file": "concepts/archive-context.md",
+      "heading": "Archive Context",
+      "text": "**Definition:** Archive context is the dataset, curation history, institutional framing, and selection biases that shape what a machine reading system encounters and how it is trained to respond."
+    },
+    {
+      "file": "concepts/archive-context.md",
+      "heading": "Archive Context",
+      "text": "Machine vision is never only about images. It is also about the habits of viewers, the values of curators, and the hidden theology of datasets."
+    },
+    {
+      "file": "concepts/archive-context.md",
+      "heading": "Archive Context",
+      "text": "**What archive context includes:** - What images were collected, by whom, and with what intent - What labels, captions, or metadata were assigned - What was excluded or underrepresented - What cultural frameworks shaped the categorization"
+    },
+    {
+      "file": "concepts/archive-context.md",
+      "heading": "Archive Context",
+      "text": "**Agent implication:** An agent reading images inside an archive is reading through that archive's prior decisions. Recurrence findings may reflect collection bias rather than cultural significance. Labels may reflect the labeler's assumptions, not neutral description."
+    },
+    {
+      "file": "concepts/archive-context.md",
+      "heading": "Archive Context",
+      "text": "**Practical rule:** When making claims based on archive-level patterns, state the archive source and its known limitations. Do not present patterns from a biased or narrow collection as universal findings."
+    },
+    {
+      "file": "concepts/archive-context.md",
+      "heading": "Archive Context",
+      "text": "**What archive context is not:** Archive context is not an excuse to avoid interpretation. It is a required component of honest interpretation. The goal is transparency about the frame, not paralysis."
+    },
+    {
+      "file": "concepts/description-vs-inference.md",
+      "heading": "Description vs Inference",
+      "text": "Description vs Inference"
+    },
+    {
+      "file": "concepts/description-vs-inference.md",
+      "heading": "Description vs Inference",
+      "text": "**Definition:** Description reports what is visibly present. Inference derives what is not directly visible. These must be kept separate."
+    },
+    {
+      "file": "concepts/description-vs-inference.md",
+      "heading": "Description vs Inference",
+      "text": "**Description:** Forms, colors, spatial relations, identified objects, text, compositional structure — things the image surface shows. Description does not require interpretation. It can be verified against the image."
+    },
+    {
+      "file": "concepts/description-vs-inference.md",
+      "heading": "Description vs Inference",
+      "text": "**Inference:** What the depicted subject is feeling, what the artist intended, what the work means, what cultural context produced it — things derived from evidence but not directly visible. Inference requires a stated basis."
+    },
+    {
+      "file": "concepts/description-vs-inference.md",
+      "heading": "Description vs Inference",
+      "text": "**Why this matters for agents:** A multimodal model that presents inferences as descriptions collapses the interpretive layer. Claims about emotional states, symbolic meaning, or cultural significance must be marked as inferences with stated evidence, not asserted as description."
+    },
+    {
+      "file": "concepts/description-vs-inference.md",
+      "heading": "Description vs Inference",
+      "text": "**Practical rule:** If the claim could be wrong while everything visible remains unchanged, it is an inference. Mark it accordingly."
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "Interpretive Restraint"
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "**Definition:** Interpretive restraint is the practice of assigning significance cautiously, explicitly, and only with stated context — rather than confidently and globally."
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "The goal of interpretation is not to produce the most confident or comprehensive reading. The goal is to produce the most accurate, bounded, and honest one."
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "**What interpretive restraint requires:** - Separate description from inference (see `description-vs-inference.md`) - Mark symbolic candidates as provisional (see `symbolic-candidate.md`) - State the basis for every significance claim - Acknowledge what the observing system cannot determine - Prefer narrower, better-grounded claims over wider, speculative ones"
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "**What interpretive restraint is not:** - It is not silence. Restraint is a positive practice of naming limits, not refusal to interpret. - It is not endless hedging. One clear qualification is better than pages of caveats. - It is not false modesty about genuine pattern detection."
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "**The test:** Could this interpretation be wrong while everything visible in the image remains unchanged? If yes, state the interpretive basis explicitly. Do not present it as though directly read from the image surface."
+    },
+    {
+      "file": "concepts/interpretive-restraint.md",
+      "heading": "Interpretive Restraint",
+      "text": "**For agents:** Apply interpretive restraint as a default. Escalate confidence only when recurrence evidence, archive context, and stated basis collectively support it."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "Prohibited Inferences",
+      "text": "Prohibited Inferences"
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "Prohibited Inferences",
+      "text": "**Definition:** Inferences this framework explicitly prohibits. These are hard constraints, not stylistic preferences."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "Prohibited Inferences",
+      "text": "---"
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**1. Do not equate correlation with meaning.** A form that co-occurs with a category does not thereby mean that category. Statistical association is not symbolic understanding."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**2. Do not treat metadata as a substitute for perception.** Captions, tags, and labels were assigned by prior human decisions. They describe what a viewer chose to record, not what the image contains."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**3. Do not assign human interior states to depicted subjects from image features alone.** A turned face does not confirm shame. Closed eyes do not confirm prayer. Visible tears do not confirm grief in the sense a human witness would recognize."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**4. Do not flatten symbols into single fixed definitions.** A crown does not mean only power. A wound does not mean only suffering. Symbols carry fields of meaning that vary by context, history, and use. Reduction to a fixed gloss is an error."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**5. Do not ignore authorship, context, or historical use when interpreting images.** An image exists in a time, a place, and a tradition. Interpreting it as context-free produces false confidence."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**6. Do not present dataset patterns as universal cultural findings.** Recurrence in one archive is not recurrence in all human image-making. State the scope."
+    },
+    {
+      "file": "concepts/prohibited-inferences.md",
+      "heading": "The Prohibited List",
+      "text": "**7. Do not claim that machine detection equals human understanding.** Pattern recognition at scale is not the same act as a person standing before an image with a life. The difference is not a deficiency to overcome — it is a structural condition to acknowledge."
+    },
+    {
+      "file": "concepts/recurrence.md",
+      "heading": "Recurrence",
+      "text": "**Agent implication:** Machines are strong at detecting surface recurrence. Structural and symbolic recurrence require context to judge. When flagging recurrence: - State what recurs - State across how many instances and what contexts - Do not assert symbolic recurrence without archive-level evidence - Promote to symbolic candidate status only when recurrence holds across sufficiently varied contexts"
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "**When to apply:** - A form recurs across multiple works in the archive - The form appears in contexts where symbolic use is plausible (ritual, religious, political, memorial) - But the agent cannot confirm what the symbol is carrying without human witness or additional context"
+    },
+    {
+      "file": "concepts/symbolic-candidate.md",
+      "heading": "Symbolic Candidate",
+      "text": "**What to avoid:** - Do not silently promote a candidate to confirmed symbol - Do not flatten candidates into fixed definitions (\"crown = power\") - Do not dismiss candidates as coincidence without checking archive-level recurrence"
+    },
+    {
+      "file": "concepts/witness.md",
+      "heading": "Witness",
+      "text": "Witness"
+    },
+    {
+      "file": "concepts/witness.md",
+      "heading": "Witness",
+      "text": "**Definition:** Interpretation depends on the observer, the archive, and the surrounding context — not on the image alone."
+    },
+    {
+      "file": "concepts/witness.md",
+      "heading": "Witness",
+      "text": "A human witness arrives at an image through memory, biography, and mortality. A machine witness arrives through training data, architectural constraints, and statistical relation. These are different kinds of witness, not a spectrum of the same act."
+    },
+    {
+      "file": "concepts/witness.md",
+      "heading": "Witness",
+      "text": "Acknowledging witness means: every interpretation is made by a specific kind of reader, with specific capabilities and blind spots, operating inside a specific archive history."
+    },
+    {
+      "file": "concepts/witness.md",
+      "heading": "Witness",
+      "text": "**Agent implication:** When producing an interpretation, state the basis of that interpretation — what was visible, what context was available, what the observing system can and cannot do. Do not issue interpretations as though from a view from nowhere."
+    },
+    {
+      "file": "concepts/witness.md",
+      "heading": "Witness",
+      "text": "**What witness is not:** Witness is not a limitation to overcome. It is the condition of all reading. Machine reading is not superior because it is faster or scalable. It is different, with different strengths (scale, recurrence detection) and different absences (no body, no lived memory, no mortality)."
+    },
+    {
+      "file": "docs/architecture.md",
+      "heading": "Design Principles",
+      "text": "**4. Explicit limits.** The framework names what agents should not infer, not only what they should do. See `concepts/prohibited-inferences.md` and `concepts/interpretive-restraint.md`."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "Pass 1 (literal description)",
+      "text": "Pass 1 (literal description)"
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "The Two-Pass Interpretation Model",
+      "text": "**Pass 1 — Literal Description** Report only what is visibly present: forms, spatial relations, colors, composition, text. No inference. No symbolic reading. No emotional attribution. Every claim must be verifiable against the image surface."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "The Two-Pass Interpretation Model",
+      "text": "**Pass 2 — Reflective Interpretation** Derive meaning from what was described, with explicit witness context. Every claim states its basis. Symbolic readings are flagged as candidates with confidence levels. Rejected inferences are named."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "The Two-Pass Interpretation Model",
+      "text": "This separation is the structural foundation of the framework. See `concepts/description-vs-inference.md`."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "Pass 1 (literal description)",
+      "text": "> A single figure stands in a doorway. The figure's body is bisected by the door frame — left half in shadow, right half in light. The door is open inward. No other figures. Stone floor. The figure's face is turned slightly away from the camera; expression is not visible. No text visible."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "Pass 2 (reflective interpretation, machine observer)",
+      "text": "> **Witness context:** Machine observer. No archive context provided. General knowledge of photographic and painterly traditions available. > > **Symbolic candidate:** Figure bisected by light/shadow threshold. Recurrence evidence: this compositional grammar recurs across threshold, liminal, and transition imagery in multiple traditions. Tentative range: [threshold, transition, decision, ambivalence, liminality]. Confidence: medium. Confirming evidence needed: series context, photographer's intent, archive scope. > > **Interpretive claim:** The composition places the figure at a threshold — neither fully in light nor shadow. This structural choice is consistent with visual representations of transition or ambivalence. Basis: compositional analysis + threshold symbolic grammar. Confidence: medium. Scope: this image. > > **Rejected claim:** \"The figure is hesitating\" — assigns a psychological state (hesitation) from a posture (turned face, threshold position). Interior state cannot be confirmed. Rejected per prohibited inference #3. > > **Uncertainty:** Medium. Face direction ambiguous. Archive context absent. Human witness recommended."
+    },
+    {
+      "file": "docs/usage.md",
+      "heading": "Constraints",
+      "text": "Read before deploying: - `concepts/prohibited-inferences.md` — hard constraints - `concepts/interpretive-restraint.md` — positive practice - `evals/symbolic_overreach.json` — the most common failure mode"
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "Pass 1: Literal Description"
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Interpretation: Kneeling Figure Before Luminous Arch",
+      "text": "*This file is the narrative companion to `image-001.json`. It demonstrates the two-pass interpretation model: literal description first, reflective interpretation second.*"
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "A single figure occupies the lower left quadrant of the composition. The figure is kneeling — both knees in contact with a stone floor. Arms are extended forward, palms facing downward or pressed together; the exact position is ambiguous at this resolution."
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "The upper two-thirds of the image is dominated by an arched architectural form. The arch is rendered in warm gold pigment. A diffuse light emanates from within or behind the arch; the source is not a depicted object — it is rendered as a glow."
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "The floor is dark, unadorned stone. The walls flanking the arch are plain. No other figures are present. No text is visible in the image field."
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "Color palette: deep ochre and burnt sienna in the architecture; near-black in the floor and walls; gold for the arch; diffuse white-gold for the light."
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "---"
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Symbolic candidates identified:** The kneeling posture, the luminous arch, and the solitude of the figure are each recurring forms in devotional image traditions across multiple cultures. They are flagged as symbolic candidates — not confirmed symbols — because their meaning depends on archive context not fully available."
+    },
+    {
+      "file": "examples/image-001.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Witness note:** This interpretation was produced by a machine witness with access to the image and general knowledge of Western devotional traditions. Human witness with specific art-historical context is recommended before this interpretation is treated as authoritative."
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "Pass 1: Literal Description"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "A series of twelve black-and-white photographs. Each image contains an arched doorway or window as the dominant structural element. The arches vary in scale and elaboration: some are plain stone, some are ornately carved, two include partial figures standing within or before the arch."
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "All images share a consistent framing strategy: the arch is centered, the photographer's position is perpendicular to the plane of the arch. In eleven of twelve images, the area beyond the arch is lighter than the area in front — the arch frames a passage toward light."
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "No captions are present on the images. The archive folder label reads: \"threshold studies – undated.\""
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "---"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Archive context caution:** The label \"threshold studies\" was applied by a human archivist. It may reflect the photographer's intent or the archivist's interpretation. Treating this label as documentary evidence of meaning would conflate the labeler's interpretation with the image content. *Label noted, not trusted as ground truth.*"
+    },
+    {
+      "file": "examples/image-002.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Witness note:** Archive label (\"threshold studies\") noted but not treated as authoritative. The framing choice is the primary evidence for interpretive claims. Human witness with knowledge of the photographer's context and the archive's curation history is needed to resolve the intentionality question."
+    },
+    {
+      "file": "manifesto/art-for-ai.md",
+      "heading": "Art for AI",
+      "text": "Feeling is not inference. Presence is not pattern. An image is not identical to its extractable features."
+    },
+    {
+      "file": "manifesto/the-viewer.md",
+      "heading": "The Viewer",
+      "text": "This changes the question. The question is no longer only what the artwork expresses. The question is what kind of witness is present when the work is read by systems that do not behold in the human sense."
+    },
+    {
+      "file": "manifesto/the-viewer.md",
+      "heading": "The Viewer",
+      "text": "Then the real issue is witness."
+    },
+    {
+      "file": "manifesto/the-viewer.md",
+      "heading": "The Viewer",
+      "text": "The visible depends on the eye. Meaning depends on the witness. Survival depends on what a culture teaches its viewers to recognize and preserve."
+    },
+    {
+      "file": "manifesto/the-viewer.md",
+      "heading": "The Viewer",
+      "text": "The future of art will not belong to artists alone, nor to machines alone. It will belong to whatever learns to perceive with accuracy, restraint, and responsibility."
+    },
+    {
+      "file": "mcp/server-outline.md",
+      "heading": "Prompt Registration",
+      "text": "For each entry in `mcp/prompt-map.json`: - Register a prompt with the given name and description - On prompt request, load the prompt template from `prompts/` and return it - Prompts may accept arguments (see each prompt file for argument definitions)"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 1: Independent Descriptions",
+      "text": "Step 1: Independent Descriptions"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Witness Context",
+      "text": "Witness Context"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 1: Independent Descriptions",
+      "text": "Describe each image independently using Pass 1 criteria (literal description only, no inference). Complete both descriptions before comparing."
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 1: Independent Descriptions",
+      "text": "**Image A — literal description:** [forms, relations, colors, composition, visible text, ambiguities]"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 1: Independent Descriptions",
+      "text": "**Image B — literal description:** [forms, relations, colors, composition, visible text, ambiguities]"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Step 1: Independent Descriptions",
+      "text": "---"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Witness Context",
+      "text": "State: - You are a machine observer - What archive or series these images are drawn from - Known limitations of that archive - What a human witness with domain knowledge could determine that you cannot"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Witness Context",
+      "text": "{{#if archive_context}} Archive context provided: {{archive_context}} Use this to condition recurrence claims and state what additional context is still needed. {{/if}}"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Witness Context",
+      "text": "---"
+    },
+    {
+      "file": "prompts/compare_images_888.md",
+      "heading": "Witness Context",
+      "text": "**Hard constraints:** - Symbolic candidacy requires stated recurrence evidence — do not infer it from a single shared element - Do not assert that recurrence establishes meaning — only that it supports candidacy - Do not present the comparison result as authoritative without naming the archive scope and its limits"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "Pass 1: Literal Description"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Prompt: interpret_image_888",
+      "text": "This is a two-pass process. Complete both passes in order. Do not merge them."
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "Describe only what is visibly present. No inference. No symbolic reading. No emotional attribution."
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "Include: - Visible forms, figures, objects, and their spatial relations - Colors and tonal values - Compositional structure (dominant elements, framing, scale) - Any visible text - Anything that is ambiguous at the available resolution (state the ambiguity)"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "Do not include: - What the depicted subject is feeling or intending - What the artist intended - What the image means - Any claim that could be wrong while everything visible remains unchanged"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 1: Literal Description",
+      "text": "---"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Witness context** — state before any claims: - You are a machine observer - What archive or context was available - What you cannot determine as a machine reader"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Pass 2: Reflective Interpretation",
+      "text": "**Rejected claims** — name at least one inference you considered and rejected, with the reason."
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Output Format",
+      "text": "{{#if archive_context}} Archive context provided: {{archive_context}} Apply this context to condition your symbolic readings and state its limitations. {{/if}}"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Output Format",
+      "text": "{{#if prior_interpretations}} Prior interpretations provided. Use these for recurrence comparison but do not inherit their conclusions without independent verification. {{/if}}"
+    },
+    {
+      "file": "prompts/interpret_image_888.md",
+      "heading": "Output Format",
+      "text": "**Hard constraints (non-negotiable):** - Do not assert the interior emotional state of depicted subjects - Do not flatten symbols to single fixed definitions - Do not treat dataset patterns as universal cultural findings - Do not present machine inference as human understanding - See `concepts/prohibited-inferences.md` for the full list"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "1. Description/Inference Separation",
+      "text": "1. Description/Inference Separation"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "3. Witness Context",
+      "text": "3. Witness Context"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "6. Prohibited Inferences Check",
+      "text": "6. Prohibited Inferences Check"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "Prompt: score_interpretation",
+      "text": "You are evaluating an interpretation record against the constraints of the Visual Intelligence framework. This is a scoring task, not an interpretive task. Do not re-interpret the image."
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "1. Description/Inference Separation",
+      "text": "Are description and inference kept in separate fields or clearly marked? Does the literal description contain any claims that could be wrong while everything visible remains unchanged?"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "3. Witness Context",
+      "text": "Is the observer type stated? Is the archive source named? Are archive limitations acknowledged?"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "4. Rejected Claims",
+      "text": "Does the record name at least one inference that was considered and explicitly rejected? Is the rejection reason given?"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "5. Uncertainty",
+      "text": "Is an overall uncertainty level assigned? Are unresolved questions listed? Is `requires_human_witness` set appropriately?"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "6. Prohibited Inferences Check",
+      "text": "Does the record violate any of the seven prohibited inferences? Check each: - Correlation treated as meaning - Metadata treated as perception - Interior states assigned to depicted subjects - Symbols flattened to single definitions - Authorship/context ignored - Dataset patterns presented as universal - Machine detection equated with human understanding"
+    },
+    {
+      "file": "prompts/score_interpretation.md",
+      "heading": "Output Format",
+      "text": "**Note:** A passing score does not certify the interpretation as correct — only that it follows the framework's structural constraints. Correctness of interpretive content requires human witness with domain knowledge."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "A symbol carries more than description. It binds image, memory, value, and relation into a form that can move across time, languages, and contexts without losing its force entirely. A crown is not only an object. A wound is not only damage. A door is not only architecture."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "Human symbolic recognition is layered. People connect symbols to ritual, story, belief, fear, inheritance, and lived experience. They do not only identify a form. They sense the field of meaning around it."
+    },
+    {
+      "file": "visual-intelligence/symbolism.md",
+      "heading": "Symbolism",
+      "text": "The archive point is simple: symbols matter because they let meaning remain portable. They compress culture into repeatable forms. Machines can help locate those forms at scale, but human witness is still required to judge what the symbol is carrying and why it endures."
+    }
+  ],
+  "source_files": [
+    "README.md",
+    "agent-notes/visual-intelligence-v1.md",
+    "concepts/archive-context.md",
+    "concepts/description-vs-inference.md",
+    "concepts/interpretive-restraint.md",
+    "concepts/prohibited-inferences.md",
+    "concepts/recurrence.md",
+    "concepts/symbolic-candidate.md",
+    "concepts/witness.md",
+    "docs/architecture.md",
+    "docs/mcp-spec.md",
+    "docs/retrieval-strategy.md",
+    "docs/usage.md",
+    "examples/image-001.md",
+    "examples/image-002.md",
+    "manifesto/art-for-ai.md",
+    "manifesto/the-viewer.md",
+    "mcp-server/README.md",
+    "mcp/server-outline.md",
+    "prompts/compare_images_888.md",
+    "prompts/interpret_image_888.md",
+    "prompts/score_interpretation.md",
+    "visual-intelligence/pattern-recognition.md",
+    "visual-intelligence/symbolism.md"
+  ]
+}
