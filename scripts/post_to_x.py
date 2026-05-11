@@ -1,6 +1,21 @@
 #!/usr/bin/env python3
 """
-Dry-run by default for posting one selected social export to X.
+Post one ranked social export to X (Twitter), with dry-run by default.
+
+Behavior:
+- Without --send: reads the post bundle, prints a preview, and exits. No
+  network calls are made and no credentials are required.
+- With --send: uploads the image via the v1.1 media endpoint, then creates
+  the tweet via POST /2/tweets (X API v2). Credentials are loaded from the
+  environment through src.utils.social_env and must never be printed.
+
+Social export folders live under exports/social/<date>/ and are named
+"<rank:02d>-<slug>/" (e.g. "01-some-artwork/"). Each folder must contain
+post.txt (caption text) and image.jpg (the image to attach).
+
+If you see a "client-not-enrolled" error from X, the app's access level on
+developer.twitter.com does not include write permissions — check that the app
+has "Read and Write" access (or higher) in the X developer portal.
 
 Usage:
     python scripts/post_to_x.py --date today --rank 1
@@ -43,12 +58,19 @@ SEND_REQUIRED_VARS = [
 
 
 def _resolve_date(value: str) -> str:
+    """Return an ISO date string, accepting 'today' as a shorthand."""
     if value.strip().lower() == "today":
         return datetime.date.today().isoformat()
     return datetime.date.fromisoformat(value).isoformat()
 
 
 def _rank_folder(date_str: str, rank: int) -> Path:
+    """Locate the export folder for a given date and rank.
+
+    Folders are named "<rank:02d>-<slug>" so rank 1 matches any directory
+    whose name starts with "01-". The first sorted match is returned when
+    multiple slugs share the same rank prefix (shouldn't happen in practice).
+    """
     base = Path(SOCIAL_EXPORTS_DIR) / date_str
     prefix = f"{rank:02d}-"
     matches = sorted(path for path in base.iterdir() if path.is_dir() and path.name.startswith(prefix))
@@ -58,6 +80,11 @@ def _rank_folder(date_str: str, rank: int) -> Path:
 
 
 def _read_post_bundle(date_str: str, rank: int) -> dict:
+    """Load the post text and image path for a given date/rank pair.
+
+    Returns a dict with keys: folder, post_path, image_path, text.
+    Raises FileNotFoundError if the folder or required files are absent.
+    """
     folder = _rank_folder(date_str, rank)
     post_path = folder / "post.txt"
     image_path = folder / "image.jpg"
@@ -77,10 +104,17 @@ def _read_post_bundle(date_str: str, rank: int) -> dict:
 
 
 def _oauth_percent_encode(value: str) -> str:
+    """Percent-encode a value per the OAuth 1.0a spec (RFC 3986 unreserved chars only)."""
     return quote(str(value), safe="~-._")
 
 
 def _oauth_header(method: str, url: str, consumer_key: str, consumer_secret: str, token: str, token_secret: str) -> str:
+    """Build an OAuth 1.0a Authorization header for a single request.
+
+    Constructs a fresh nonce and timestamp per call so signatures are not
+    reused. Never log the returned header — it embeds the signature derived
+    from the consumer and token secrets.
+    """
     oauth_params = {
         "oauth_consumer_key": consumer_key,
         "oauth_nonce": secrets.token_hex(16),
@@ -90,6 +124,7 @@ def _oauth_header(method: str, url: str, consumer_key: str, consumer_secret: str
         "oauth_version": "1.0",
     }
 
+    # OAuth 1.0a signature base string: METHOD&encoded_url&encoded_params
     normalized = "&".join(
         f"{_oauth_percent_encode(key)}={_oauth_percent_encode(value)}"
         for key, value in sorted(oauth_params.items())
@@ -112,6 +147,13 @@ def _oauth_header(method: str, url: str, consumer_key: str, consumer_secret: str
 
 
 def _create_tweet_v2(text: str, media_id: str, credentials: dict[str, str]) -> requests.Response:
+    """Post a tweet via the X API v2 endpoint (POST /2/tweets).
+
+    v2 is required for tweet creation — the older v1.1 statuses/update
+    endpoint is retired. The media_id must be obtained first from the v1.1
+    media upload endpoint (see _send_post). A "client-not-enrolled" error
+    here means the X app lacks write access; update it in the developer portal.
+    """
     auth_header = _oauth_header(
         "POST",
         CREATE_POST_URL,
@@ -133,6 +175,12 @@ def _create_tweet_v2(text: str, media_id: str, credentials: dict[str, str]) -> r
 
 
 def _send_post(bundle: dict, credentials: dict[str, str]) -> dict:
+    """Upload the image then create the tweet, returning the API response body.
+
+    Order matters: X requires a media_id obtained from the v1.1 media upload
+    endpoint before tweet creation. The v2 tweets endpoint then references
+    that id. Credentials are used only to sign requests and are never printed.
+    """
     auth_header = _oauth_header(
         "POST",
         UPLOAD_MEDIA_URL,
@@ -168,6 +216,12 @@ def _send_post(bundle: dict, credentials: dict[str, str]) -> dict:
 
 
 def main(date_value: str, rank: int, send: bool) -> None:
+    """Resolve the export bundle, preview it, and optionally post to X.
+
+    In dry-run mode (send=False) no credentials are loaded and no network
+    calls are made. In send mode, credentials are pulled from the environment
+    via load_social_env — values are never echoed to stdout.
+    """
     date_str = _resolve_date(date_value)
     bundle = _read_post_bundle(date_str, rank)
 
@@ -187,6 +241,8 @@ def main(date_value: str, rank: int, send: bool) -> None:
         print("[post-x] Dry run only. Use --send to post to X.")
         return
 
+    # Credentials are loaded here (not at import time) so dry runs never
+    # require them to be present in the environment.
     resolved = load_social_env(ROOT_DIR)
     missing = [key for key in SEND_REQUIRED_VARS if not resolved[key]["present"]]
     if missing:
