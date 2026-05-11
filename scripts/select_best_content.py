@@ -28,6 +28,7 @@ SOCIAL_EXPORTS_DIR = os.path.join(EXPORTS_DIR, "social")
 DEFAULT_TOP = 3
 HASHTAGS = "#art #visualintelligence #rareimage"
 COMBINED_SCORE_FORMULA = "0.45 * rarity_score + 0.35 * viral_score + 0.20 * brand_fit"
+MAX_POST_CHARS = 280
 
 
 def _resolve_date(value: str) -> str:
@@ -174,17 +175,37 @@ def _find_image_path(source: dict, date_str: str) -> str | None:
 
 
 def _post_text(title: str, caption: str, source_url: str) -> str:
-    return "\n".join(
-        [
-            title.strip(),
-            "",
-            caption.strip(),
-            "",
-            "—",
-            f"Source: {source_url}",
-            HASHTAGS,
-        ]
-    ).strip() + "\n"
+    def _assemble(cap: str, include_hashtags: bool = True) -> str:
+        parts = [title.strip()]
+        if cap:
+            parts += ["", cap.strip()]
+        parts += ["", "—", f"Source: {source_url}"]
+        if include_hashtags:
+            parts.append(HASHTAGS)
+        return "\n".join(parts)
+
+    # 1. Full text fits — happy path
+    if len(_assemble(caption)) <= MAX_POST_CHARS:
+        return _assemble(caption) + "\n"
+
+    # 2. Truncate caption word-by-word, keeping source URL and hashtags
+    words = caption.strip().split()
+    kept: list[str] = []
+    for word in words:
+        test_cap = " ".join(kept + [word]) + "…"
+        if len(_assemble(test_cap)) <= MAX_POST_CHARS:
+            kept.append(word)
+        else:
+            break
+    if kept:
+        return _assemble(" ".join(kept) + "…") + "\n"
+
+    # 3. No caption — title + source URL + hashtags
+    if len(_assemble("")) <= MAX_POST_CHARS:
+        return _assemble("") + "\n"
+
+    # 4. Drop hashtags — title + source URL only
+    return _assemble("", include_hashtags=False)[:MAX_POST_CHARS].strip() + "\n"
 
 
 def _combined_score(rarity_score: float, viral_score: float, brand_fit: float) -> float:
