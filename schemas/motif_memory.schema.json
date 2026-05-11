@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "motif_memory",
+  "title": "MotifMemory",
+  "description": "Aggregated motif memory built from interpretation, rarity, and viral records.",
+  "type": "object",
+  "required": ["updated_at", "motifs"],
+  "properties": {
+    "updated_at": { "type": "string", "format": "date-time" },
+    "motifs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "motif_id",
+          "label",
+          "aliases",
+          "count",
+          "record_ids",
+          "source_ids",
+          "rarity_average",
+          "viral_average",
+          "first_seen",
+          "last_seen",
+          "example_elements",
+          "notes"
+        ],
+        "properties": {
+          "motif_id": { "type": "string" },
+          "label": { "type": "string" },
+          "aliases": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "record_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "source_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "rarity_average": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "viral_average": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "first_seen": { "type": "string" },
+          "last_seen": { "type": "string" },
+          "example_elements": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
