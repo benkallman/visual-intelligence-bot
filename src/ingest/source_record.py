@@ -74,6 +74,9 @@ def _download_image(url: str, source_id: str) -> tuple[str, str]:
     if len(raw_bytes) > _MAX_IMAGE_BYTES:
         effective_max_side = min(max_side, 384)
 
+    # Wikimedia originals can be enormous; we resize immediately so the bomb
+    # guard is unnecessary here.
+    Image.MAX_IMAGE_PIXELS = None
     image = Image.open(io.BytesIO(raw_bytes))
     if image.mode != "RGB":
         image = image.convert("RGB")
