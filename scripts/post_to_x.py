@@ -72,6 +72,13 @@ def _rank_folder(date_str: str, rank: int) -> Path:
     multiple slugs share the same rank prefix (shouldn't happen in practice).
     """
     base = Path(SOCIAL_EXPORTS_DIR) / date_str
+    if not base.is_dir():
+        raise FileNotFoundError(
+            f"No social export folder for date {date_str} "
+            f"(looked in {base}). "
+            f"Use --date YYYY-MM-DD to specify an existing date, "
+            f"or run export_public_digest.py + select_best_content.py to create one."
+        )
     prefix = f"{rank:02d}-"
     matches = sorted(path for path in base.iterdir() if path.is_dir() and path.name.startswith(prefix))
     if not matches:
@@ -261,4 +268,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.rank <= 0:
         parser.error("--rank must be greater than 0")
-    main(date_value=args.date, rank=args.rank, send=args.send)
+    try:
+        main(date_value=args.date, rank=args.rank, send=args.send)
+    except (FileNotFoundError, RuntimeError) as exc:
+        print(f"[post-x] Error: {exc}", file=sys.stderr)
+        sys.exit(1)
