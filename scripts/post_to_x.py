@@ -181,6 +181,45 @@ def _create_tweet_v2(text: str, media_id: str, credentials: dict[str, str]) -> r
     )
 
 
+VERIFY_CREDENTIALS_URL = "https://api.x.com/1.1/account/verify_credentials.json"
+
+
+def _verify_credentials(credentials: dict[str, str]) -> None:
+    """Optional diagnostic: confirm the four OAuth keys are mutually valid.
+
+    Run with --verify-auth to call this before sending. Not part of the normal
+    send path — the v1.1 verify_credentials endpoint sometimes returns 401 even
+    when media upload and tweet creation succeed, which is misleading.
+
+    - 200 → keys are correctly paired and the account is active.
+    - 401 → consumer key/secret or access token/secret are wrong or mismatched;
+            regenerate all four from the same X app.
+    - 403 → keys are valid but the app lacks the required permission tier.
+    """
+    auth_header = _oauth_header(
+        "GET",
+        VERIFY_CREDENTIALS_URL,
+        credentials["TWITTER_API_KEY"],
+        credentials["TWITTER_API_SECRET"],
+        credentials["TWITTER_ACCESS_TOKEN"],
+        credentials["TWITTER_ACCESS_SECRET"],
+    )
+    resp = requests.get(
+        VERIFY_CREDENTIALS_URL,
+        headers={"Authorization": auth_header},
+        params={"skip_status": "true", "include_entities": "false"},
+        timeout=30,
+    )
+    print(f"[post-x] verify_credentials: HTTP {resp.status_code}")
+    try:
+        body = resp.json()
+        # Print only non-sensitive fields — never print full token or secret values.
+        safe = {k: body[k] for k in ("id_str", "screen_name", "errors") if k in body}
+        print(json.dumps(safe, indent=2, ensure_ascii=False))
+    except Exception:
+        print(resp.text)
+
+
 def _send_post(bundle: dict, credentials: dict[str, str]) -> dict:
     """Upload the image then create the tweet, returning the API response body.
 
@@ -206,6 +245,11 @@ def _send_post(bundle: dict, credentials: dict[str, str]) -> dict:
             files=files,
             timeout=60,
         )
+    print(f"[post-x] Media upload response: HTTP {upload_response.status_code}")
+    try:
+        print(json.dumps(upload_response.json(), indent=2, ensure_ascii=False))
+    except Exception:
+        print(upload_response.text)
     upload_response.raise_for_status()
     media_id = upload_response.json().get("media_id_string")
     if not media_id:
@@ -222,12 +266,16 @@ def _send_post(bundle: dict, credentials: dict[str, str]) -> dict:
     return response_body
 
 
-def main(date_value: str, rank: int, send: bool) -> None:
+def main(date_value: str, rank: int, send: bool, verify_auth: bool = False) -> None:
     """Resolve the export bundle, preview it, and optionally post to X.
 
     In dry-run mode (send=False) no credentials are loaded and no network
     calls are made. In send mode, credentials are pulled from the environment
     via load_social_env — values are never echoed to stdout.
+
+    verify_auth=True runs _verify_credentials before sending (opt-in via
+    --verify-auth). It is not part of the normal send path to avoid spurious
+    401 noise from the v1.1 endpoint when the post itself would succeed.
     """
     date_str = _resolve_date(date_value)
     bundle = _read_post_bundle(date_str, rank)
@@ -256,6 +304,8 @@ def main(date_value: str, rank: int, send: bool) -> None:
         raise RuntimeError(f"Missing required X credentials for send mode: {', '.join(missing)}")
 
     credentials = {key: str(resolved[key]["value"]) for key in SEND_REQUIRED_VARS}
+    if verify_auth:
+        _verify_credentials(credentials)
     _send_post(bundle, credentials)
     print("[post-x] Sent successfully.")
 
@@ -265,11 +315,16 @@ if __name__ == "__main__":
     parser.add_argument("--date", default="today", help="Date folder in exports/social, or 'today'")
     parser.add_argument("--rank", type=int, required=True, help="Rank number to post from the social export folder")
     parser.add_argument("--send", action="store_true", help="Actually send the post to X")
+    parser.add_argument(
+        "--verify-auth",
+        action="store_true",
+        help="Run verify_credentials diagnostic before sending (optional; may return 401 even on success)",
+    )
     args = parser.parse_args()
     if args.rank <= 0:
         parser.error("--rank must be greater than 0")
     try:
-        main(date_value=args.date, rank=args.rank, send=args.send)
+        main(date_value=args.date, rank=args.rank, send=args.send, verify_auth=args.verify_auth)
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"[post-x] Error: {exc}", file=sys.stderr)
         sys.exit(1)
