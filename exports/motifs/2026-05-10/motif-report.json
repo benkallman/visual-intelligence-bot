@@ -1,0 +1,1022 @@
+{
+  "date": "2026-05-10",
+  "updated_at": "2026-05-11T00:24:46.146815Z",
+  "motif_count": 65,
+  "top_recurring_motifs": [
+    {
+      "motif_id": "mot_portrait",
+      "label": "portrait",
+      "aliases": [
+        "a bird perched above the central figure's head",
+        "a cupid-like figure with wings at the bottom of the painting",
+        "a figure that appears to be a woman with long hair, depicted in a three-quarter view. she is wearing a headpiece and a garment that suggests a historical or biblical context",
+        "a person's portrait in a round frame",
+        "an open book with text, partially obscured by the figure",
+        "face-to-face communication",
+        "gold-framed paintings or portraits on the walls",
+        "old, rectangular object with a textured surface made of wood or similar material",
+        "portraiture",
+        "scene with several figures",
+        "seated figure gesturing towards standing figure",
+        "standing figure wearing a blue garment and having a beard",
+        "the man in the portrait",
+        "the man's face occupies the majority of the image, with his gaze directed towards the viewer",
+        "there are two figures near the water's edge",
+        "various other figures and objects, including a bird perched above the central figure's head and a cupid-like figure with wings at the bottom of the painting"
+      ],
+      "count": 11,
+      "record_ids": [
+        "rec_1d4a5a099b",
+        "rec_6601ecb12b",
+        "rec_6712457a33",
+        "rec_705878d2d7",
+        "rec_7c658df85e",
+        "rec_8764d49b13",
+        "rec_970a3e2638",
+        "rec_a288e82b72",
+        "rec_ade1adf708",
+        "rec_d83b95d8b4",
+        "rec_test_wiki_img_001"
+      ],
+      "source_ids": [
+        "src_1d4a5a099b",
+        "src_6601ecb12b",
+        "src_6712457a33",
+        "src_705878d2d7",
+        "src_7c658df85e",
+        "src_8764d49b13",
+        "src_970a3e2638",
+        "src_a288e82b72",
+        "src_ade1adf708",
+        "src_d83b95d8b4",
+        "src_test_wiki_img_001"
+      ],
+      "rarity_average": 0.2,
+      "viral_average": 0.3227,
+      "first_seen": "2026-04-20T12:25:48.058307Z",
+      "last_seen": "2026-05-10T23:40:10.636219Z",
+      "example_elements": [
+        "A figure that appears to be a woman with long hair, depicted in a three-quarter view. She is wearing a headpiece and a garment that suggests a historical or biblical context",
+        "old, rectangular object with a textured surface made of wood or similar material",
+        "A person's portrait in a round frame",
+        "The man in the portrait",
+        "Gold-framed paintings or portraits on the walls"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_religious",
+      "label": "religious",
+      "aliases": [
+        "religious art",
+        "religious attire",
+        "religious iconography",
+        "traditional religious art"
+      ],
+      "count": 3,
+      "record_ids": [
+        "rec_1d4a5a099b",
+        "rec_cc128ead65",
+        "rec_d83b95d8b4"
+      ],
+      "source_ids": [
+        "src_1d4a5a099b",
+        "src_cc128ead65",
+        "src_d83b95d8b4"
+      ],
+      "rarity_average": 0.2667,
+      "viral_average": 0.45,
+      "first_seen": "2026-05-10T16:56:19.058778Z",
+      "last_seen": "2026-05-10T19:13:53.166293Z",
+      "example_elements": [
+        "religious art",
+        "religious iconography",
+        "religious attire"
+      ],
+      "notes": "**When to apply:** - A form recurs across multiple works in the archive - The form appears in contexts where symbolic use is plausible (ritual, religious, political, memorial) - Bu"
+    },
+    {
+      "motif_id": "mot_manuscript",
+      "label": "manuscript",
+      "aliases": [
+        "a man in religious attire holding a book or manuscript",
+        "a woman seated on a throne-like structure, holding a book or scroll in her hands"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_a288e82b72",
+        "rec_d83b95d8b4"
+      ],
+      "source_ids": [
+        "src_a288e82b72",
+        "src_d83b95d8b4"
+      ],
+      "rarity_average": 0.2,
+      "viral_average": 0.45,
+      "first_seen": "2026-05-10T16:56:19.058778Z",
+      "last_seen": "2026-05-10T18:45:19.955955Z",
+      "example_elements": [
+        "A woman seated on a throne-like structure, holding a book or scroll in her hands",
+        "A man in religious attire holding a book or manuscript"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_banner",
+      "label": "banner",
+      "aliases": [
+        "a banner with a motto",
+        "a banner with inscriptions"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_cc128ead65",
+        "rec_e35c254183"
+      ],
+      "source_ids": [
+        "src_cc128ead65",
+        "src_e35c254183"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T19:03:42.584790Z",
+      "last_seen": "2026-05-10T19:13:53.166293Z",
+      "example_elements": [
+        "A banner with inscriptions",
+        "A banner with a motto"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_heraldry",
+      "label": "heraldry",
+      "aliases": [
+        "a castle-like structure on the central part of the shield",
+        "a crown above a shield",
+        "a lion rampant on a shield",
+        "a shield with four quadrants",
+        "a shield with four quarters",
+        "coat of arms",
+        "the shield is divided into four quadrants"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_cc128ead65",
+        "rec_e35c254183"
+      ],
+      "source_ids": [
+        "src_cc128ead65",
+        "src_e35c254183"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T19:03:42.584790Z",
+      "last_seen": "2026-05-10T19:13:53.166293Z",
+      "example_elements": [
+        "A shield with four quadrants",
+        "A shield with four quarters"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_altar",
+      "label": "altar",
+      "aliases": [
+        "a small skull resting on what seems to be a surface or altar",
+        "altar with painting or mural on it",
+        "chapel or church",
+        "patterned carpet or rug in front of altar"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_1d4a5a099b",
+        "rec_7c658df85e"
+      ],
+      "source_ids": [
+        "src_1d4a5a099b",
+        "src_7c658df85e"
+      ],
+      "rarity_average": 0.25,
+      "viral_average": 0.375,
+      "first_seen": "2026-05-10T17:21:30.258425Z",
+      "last_seen": "2026-05-10T18:54:48.021450Z",
+      "example_elements": [
+        "A small skull resting on what seems to be a surface or altar",
+        "Altar with painting or mural on it"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_window",
+      "label": "window",
+      "aliases": [
+        "a building with a visible window and what appears to be a chimney or ventilation system on its roof. there are also several indistinct shapes that could be interpreted as people or animals, but their details are not clear due to the image's quality and style",
+        "vaulted ceiling with exposed rafters and skylight or window at far end"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_6caf1b2572",
+        "rec_7c658df85e"
+      ],
+      "source_ids": [
+        "src_6caf1b2572",
+        "src_7c658df85e"
+      ],
+      "rarity_average": 0.15,
+      "viral_average": 0.15,
+      "first_seen": "2026-04-20T16:24:20.785912Z",
+      "last_seen": "2026-05-10T17:21:30.258425Z",
+      "example_elements": [
+        "A building with a visible window and what appears to be a chimney or ventilation system on its roof. There are also several indistinct shapes that could be interpreted as people or animals, but their details are not clear due to the image's quality and style",
+        "Vaulted ceiling with exposed rafters and skylight or window at far end"
+      ],
+      "notes": "A series of twelve black-and-white photographs. Each image contains an arched doorway or window as the dominant structural element. The arches vary in scale and elaboration: some a"
+    },
+    {
+      "motif_id": "mot_bridge",
+      "label": "bridge",
+      "aliases": [
+        "the bridge is visible"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_8764d49b13",
+        "rec_test_wiki_img_001"
+      ],
+      "source_ids": [
+        "src_8764d49b13",
+        "src_test_wiki_img_001"
+      ],
+      "rarity_average": 0.0,
+      "viral_average": 0.0,
+      "first_seen": "2026-04-20T12:25:48.058307Z",
+      "last_seen": "2026-04-20T16:31:17.450067Z",
+      "example_elements": [
+        "The bridge is visible"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_impressionism",
+      "label": "impressionism",
+      "aliases": [],
+      "count": 2,
+      "record_ids": [
+        "rec_8764d49b13",
+        "rec_test_wiki_img_001"
+      ],
+      "source_ids": [
+        "src_8764d49b13",
+        "src_test_wiki_img_001"
+      ],
+      "rarity_average": 0.0,
+      "viral_average": 0.0,
+      "first_seen": "2026-04-20T12:25:48.058307Z",
+      "last_seen": "2026-04-20T16:31:17.450067Z",
+      "example_elements": [
+        "impressionism"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_sky",
+      "label": "sky",
+      "aliases": [
+        "the sky is filled with stars"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_8764d49b13",
+        "rec_test_wiki_img_001"
+      ],
+      "source_ids": [
+        "src_8764d49b13",
+        "src_test_wiki_img_001"
+      ],
+      "rarity_average": 0.0,
+      "viral_average": 0.0,
+      "first_seen": "2026-04-20T12:25:48.058307Z",
+      "last_seen": "2026-04-20T16:31:17.450067Z",
+      "example_elements": [
+        "The sky is filled with stars"
+      ],
+      "notes": ""
+    }
+  ],
+  "rare_motifs_worth_watching": [
+    {
+      "motif_id": "mot_banner",
+      "label": "banner",
+      "aliases": [
+        "a banner with a motto",
+        "a banner with inscriptions"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_cc128ead65",
+        "rec_e35c254183"
+      ],
+      "source_ids": [
+        "src_cc128ead65",
+        "src_e35c254183"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T19:03:42.584790Z",
+      "last_seen": "2026-05-10T19:13:53.166293Z",
+      "example_elements": [
+        "A banner with inscriptions",
+        "A banner with a motto"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_heraldry",
+      "label": "heraldry",
+      "aliases": [
+        "a castle-like structure on the central part of the shield",
+        "a crown above a shield",
+        "a lion rampant on a shield",
+        "a shield with four quadrants",
+        "a shield with four quarters",
+        "coat of arms",
+        "the shield is divided into four quadrants"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_cc128ead65",
+        "rec_e35c254183"
+      ],
+      "source_ids": [
+        "src_cc128ead65",
+        "src_e35c254183"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T19:03:42.584790Z",
+      "last_seen": "2026-05-10T19:13:53.166293Z",
+      "example_elements": [
+        "A shield with four quadrants",
+        "A shield with four quarters"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_antique",
+      "label": "antique",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_6601ecb12b"
+      ],
+      "source_ids": [
+        "src_6601ecb12b"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.3,
+      "first_seen": "2026-05-10T22:06:29.153681Z",
+      "last_seen": "2026-05-10T22:06:29.153681Z",
+      "example_elements": [
+        "antique"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_curly",
+      "label": "curly",
+      "aliases": [
+        "curly hair"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_6712457a33"
+      ],
+      "source_ids": [
+        "src_6712457a33"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T23:19:13.021140Z",
+      "last_seen": "2026-05-10T23:19:13.021140Z",
+      "example_elements": [
+        "curly hair"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_family",
+      "label": "family",
+      "aliases": [
+        "family history"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_e35c254183"
+      ],
+      "source_ids": [
+        "src_e35c254183"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T19:03:42.584790Z",
+      "last_seen": "2026-05-10T19:03:42.584790Z",
+      "example_elements": [
+        "family history"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_fortress",
+      "label": "fortress",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_cc128ead65"
+      ],
+      "source_ids": [
+        "src_cc128ead65"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T19:13:53.166293Z",
+      "last_seen": "2026-05-10T19:13:53.166293Z",
+      "example_elements": [
+        "fortress"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_label",
+      "label": "label",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_6601ecb12b"
+      ],
+      "source_ids": [
+        "src_6601ecb12b"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.3,
+      "first_seen": "2026-05-10T22:06:29.153681Z",
+      "last_seen": "2026-05-10T22:06:29.153681Z",
+      "example_elements": [
+        "label"
+      ],
+      "notes": "No captions are present on the images. The archive folder label reads: \"threshold studies – undated.\" **Archive context caution:** The label \"threshold studies\" was applied by a human archivist. It may reflect the photographer's intent or the archivist's interpretation. Treating th"
+    },
+    {
+      "motif_id": "mot_light",
+      "label": "light",
+      "aliases": [
+        "light skin"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_6712457a33"
+      ],
+      "source_ids": [
+        "src_6712457a33"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T23:19:13.021140Z",
+      "last_seen": "2026-05-10T23:19:13.021140Z",
+      "example_elements": [
+        "light skin"
+      ],
+      "notes": "> **Witness context:** Machine observer. No archive context provided. General knowledge of photographic and painterly traditions available. > > **Symbolic candidate:** Figure bisec **Recurrence finding:** The arch-toward-light composition recurs in 11 of 12 images. This is statistically significant within the set. The recurrence is real."
+    },
+    {
+      "motif_id": "mot_lion",
+      "label": "lion",
+      "aliases": [
+        "a lion passant guardant"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_e35c254183"
+      ],
+      "source_ids": [
+        "src_e35c254183"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T19:03:42.584790Z",
+      "last_seen": "2026-05-10T19:03:42.584790Z",
+      "example_elements": [
+        "A lion passant guardant"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_nobility",
+      "label": "nobility",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_e35c254183"
+      ],
+      "source_ids": [
+        "src_e35c254183"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T19:03:42.584790Z",
+      "last_seen": "2026-05-10T19:03:42.584790Z",
+      "example_elements": [
+        "nobility"
+      ],
+      "notes": ""
+    }
+  ],
+  "high_viral_motifs": [
+    {
+      "motif_id": "mot_attention",
+      "label": "attention",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_970a3e2638"
+      ],
+      "source_ids": [
+        "src_970a3e2638"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T18:39:15.660530Z",
+      "last_seen": "2026-05-10T18:39:15.660530Z",
+      "example_elements": [
+        "attention"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_beach",
+      "label": "beach",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_da6d74686a"
+      ],
+      "source_ids": [
+        "src_da6d74686a"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T16:45:50.711521Z",
+      "last_seen": "2026-05-10T16:45:50.711521Z",
+      "example_elements": [
+        "beach"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_beard",
+      "label": "beard",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_970a3e2638"
+      ],
+      "source_ids": [
+        "src_970a3e2638"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T18:39:15.660530Z",
+      "last_seen": "2026-05-10T18:39:15.660530Z",
+      "example_elements": [
+        "beard"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_boats",
+      "label": "boats",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_da6d74686a"
+      ],
+      "source_ids": [
+        "src_da6d74686a"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T16:45:50.711521Z",
+      "last_seen": "2026-05-10T16:45:50.711521Z",
+      "example_elements": [
+        "boats"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_contemplative",
+      "label": "contemplative",
+      "aliases": [
+        "contemplative expression"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_d83b95d8b4"
+      ],
+      "source_ids": [
+        "src_d83b95d8b4"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T16:56:19.058778Z",
+      "last_seen": "2026-05-10T16:56:19.058778Z",
+      "example_elements": [
+        "contemplative expression"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_conversation",
+      "label": "conversation",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_970a3e2638"
+      ],
+      "source_ids": [
+        "src_970a3e2638"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T18:39:15.660530Z",
+      "last_seen": "2026-05-10T18:39:15.660530Z",
+      "example_elements": [
+        "conversation"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_dutch",
+      "label": "dutch",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_da6d74686a"
+      ],
+      "source_ids": [
+        "src_da6d74686a"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T16:45:50.711521Z",
+      "last_seen": "2026-05-10T16:45:50.711521Z",
+      "example_elements": [
+        "Dutch"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_garment",
+      "label": "garment",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_970a3e2638"
+      ],
+      "source_ids": [
+        "src_970a3e2638"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T18:39:15.660530Z",
+      "last_seen": "2026-05-10T18:39:15.660530Z",
+      "example_elements": [
+        "garment"
+      ],
+      "notes": ""
+    },
+    {
+      "motif_id": "mot_gesture",
+      "label": "gesture",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_970a3e2638"
+      ],
+      "source_ids": [
+        "src_970a3e2638"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T18:39:15.660530Z",
+      "last_seen": "2026-05-10T18:39:15.660530Z",
+      "example_elements": [
+        "gesture"
+      ],
+      "notes": "A pattern begins with recurrence. Something appears again: a shape, a gesture, a color relation, a composition, a sequence, a motif."
+    },
+    {
+      "motif_id": "mot_group",
+      "label": "group",
+      "aliases": [
+        "group of people"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_da6d74686a"
+      ],
+      "source_ids": [
+        "src_da6d74686a"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T16:45:50.711521Z",
+      "last_seen": "2026-05-10T16:45:50.711521Z",
+      "example_elements": [
+        "group of people"
+      ],
+      "notes": ""
+    }
+  ],
+  "archive_aligned_motifs": [
+    {
+      "motif_id": "mot_label",
+      "label": "label",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_6601ecb12b"
+      ],
+      "source_ids": [
+        "src_6601ecb12b"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.3,
+      "first_seen": "2026-05-10T22:06:29.153681Z",
+      "last_seen": "2026-05-10T22:06:29.153681Z",
+      "example_elements": [
+        "label"
+      ],
+      "notes": "No captions are present on the images. The archive folder label reads: \"threshold studies – undated.\" **Archive context caution:** The label \"threshold studies\" was applied by a human archivist. It may reflect the photographer's intent or the archivist's interpretation. Treating th"
+    },
+    {
+      "motif_id": "mot_light",
+      "label": "light",
+      "aliases": [
+        "light skin"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_6712457a33"
+      ],
+      "source_ids": [
+        "src_6712457a33"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T23:19:13.021140Z",
+      "last_seen": "2026-05-10T23:19:13.021140Z",
+      "example_elements": [
+        "light skin"
+      ],
+      "notes": "> **Witness context:** Machine observer. No archive context provided. General knowledge of photographic and painterly traditions available. > > **Symbolic candidate:** Figure bisec **Recurrence finding:** The arch-toward-light composition recurs in 11 of 12 images. This is statistically significant within the set. The recurrence is real."
+    },
+    {
+      "motif_id": "mot_small",
+      "label": "small",
+      "aliases": [
+        "small, rectangular label with text that is not clearly legible"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_6601ecb12b"
+      ],
+      "source_ids": [
+        "src_6601ecb12b"
+      ],
+      "rarity_average": 0.5,
+      "viral_average": 0.3,
+      "first_seen": "2026-05-10T22:06:29.153681Z",
+      "last_seen": "2026-05-10T22:06:29.153681Z",
+      "example_elements": [
+        "small, rectangular label with text that is not clearly legible"
+      ],
+      "notes": "The compositional arrangement — small figure below, large luminous form above — spatially enacts a relation of scale and humility. This spatial grammar recurs across devotional ima"
+    },
+    {
+      "motif_id": "mot_religious",
+      "label": "religious",
+      "aliases": [
+        "religious art",
+        "religious attire",
+        "religious iconography",
+        "traditional religious art"
+      ],
+      "count": 3,
+      "record_ids": [
+        "rec_1d4a5a099b",
+        "rec_cc128ead65",
+        "rec_d83b95d8b4"
+      ],
+      "source_ids": [
+        "src_1d4a5a099b",
+        "src_cc128ead65",
+        "src_d83b95d8b4"
+      ],
+      "rarity_average": 0.2667,
+      "viral_average": 0.45,
+      "first_seen": "2026-05-10T16:56:19.058778Z",
+      "last_seen": "2026-05-10T19:13:53.166293Z",
+      "example_elements": [
+        "religious art",
+        "religious iconography",
+        "religious attire"
+      ],
+      "notes": "**When to apply:** - A form recurs across multiple works in the archive - The form appears in contexts where symbolic use is plausible (ritual, religious, political, memorial) - Bu"
+    },
+    {
+      "motif_id": "mot_black",
+      "label": "black",
+      "aliases": [
+        "the black object in the man's left hand"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_a42f79fdfb"
+      ],
+      "source_ids": [
+        "src_a42f79fdfb"
+      ],
+      "rarity_average": 0.2,
+      "viral_average": 0.2,
+      "first_seen": "2026-05-10T18:25:40.405817Z",
+      "last_seen": "2026-05-10T18:25:40.405817Z",
+      "example_elements": [
+        "The black object in the man's left hand"
+      ],
+      "notes": "Color palette: deep ochre and burnt sienna in the architecture; near-black in the floor and walls; gold for the arch; diffuse white-gold for the light. A series of twelve black-and-white photographs. Each image contains an arched doorway or window as the dominant structural element. The arches vary in scale and elaboration: some a"
+    },
+    {
+      "motif_id": "mot_historical",
+      "label": "historical",
+      "aliases": [
+        "historical attire"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_a42f79fdfb"
+      ],
+      "source_ids": [
+        "src_a42f79fdfb"
+      ],
+      "rarity_average": 0.2,
+      "viral_average": 0.2,
+      "first_seen": "2026-05-10T18:25:40.405817Z",
+      "last_seen": "2026-05-10T18:25:40.405817Z",
+      "example_elements": [
+        "historical attire"
+      ],
+      "notes": "**5. Do not ignore authorship, context, or historical use when interpreting images.** An image exists in a time, a place, and a tradition. Interpreting it as context-free produces **Witness note:** This interpretation was produced by a machine witness with access to the image and general knowledge of Western devotional traditions. Human witness with specific"
+    },
+    {
+      "motif_id": "mot_man",
+      "label": "man",
+      "aliases": [
+        "a man in historical attire"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_a42f79fdfb"
+      ],
+      "source_ids": [
+        "src_a42f79fdfb"
+      ],
+      "rarity_average": 0.2,
+      "viral_average": 0.2,
+      "first_seen": "2026-05-10T18:25:40.405817Z",
+      "last_seen": "2026-05-10T18:25:40.405817Z",
+      "example_elements": [
+        "A man in historical attire"
+      ],
+      "notes": "**Agent implication:** Machines are strong at detecting surface recurrence. Structural and symbolic recurrence require context to judge. When flagging recurrence: - State what recu **When to apply:** - A form recurs across multiple works in the archive - The form appears in contexts where symbolic use is plausible (ritual, religious, political, memorial) - Bu"
+    },
+    {
+      "motif_id": "mot_window",
+      "label": "window",
+      "aliases": [
+        "a building with a visible window and what appears to be a chimney or ventilation system on its roof. there are also several indistinct shapes that could be interpreted as people or animals, but their details are not clear due to the image's quality and style",
+        "vaulted ceiling with exposed rafters and skylight or window at far end"
+      ],
+      "count": 2,
+      "record_ids": [
+        "rec_6caf1b2572",
+        "rec_7c658df85e"
+      ],
+      "source_ids": [
+        "src_6caf1b2572",
+        "src_7c658df85e"
+      ],
+      "rarity_average": 0.15,
+      "viral_average": 0.15,
+      "first_seen": "2026-04-20T16:24:20.785912Z",
+      "last_seen": "2026-05-10T17:21:30.258425Z",
+      "example_elements": [
+        "A building with a visible window and what appears to be a chimney or ventilation system on its roof. There are also several indistinct shapes that could be interpreted as people or animals, but their details are not clear due to the image's quality and style",
+        "Vaulted ceiling with exposed rafters and skylight or window at far end"
+      ],
+      "notes": "A series of twelve black-and-white photographs. Each image contains an arched doorway or window as the dominant structural element. The arches vary in scale and elaboration: some a"
+    },
+    {
+      "motif_id": "mot_description",
+      "label": "description",
+      "aliases": [
+        "description-vs-inference"
+      ],
+      "count": 1,
+      "record_ids": [
+        "rec_705878d2d7"
+      ],
+      "source_ids": [
+        "src_705878d2d7"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.4,
+      "first_seen": "2026-05-10T23:40:10.636219Z",
+      "last_seen": "2026-05-10T23:40:10.636219Z",
+      "example_elements": [
+        "description-vs-inference"
+      ],
+      "notes": "**Description:** Forms, colors, spatial relations, identified objects, text, compositional structure — things the image surface shows. Description does not require interpretation. **Why this matters for agents:** A multimodal model that presents inferences as descriptions collapses the interpretive layer. Claims about emotional states, symbolic meaning, or c"
+    },
+    {
+      "motif_id": "mot_gesture",
+      "label": "gesture",
+      "aliases": [],
+      "count": 1,
+      "record_ids": [
+        "rec_970a3e2638"
+      ],
+      "source_ids": [
+        "src_970a3e2638"
+      ],
+      "rarity_average": 0.1,
+      "viral_average": 0.5,
+      "first_seen": "2026-05-10T18:39:15.660530Z",
+      "last_seen": "2026-05-10T18:39:15.660530Z",
+      "example_elements": [
+        "gesture"
+      ],
+      "notes": "A pattern begins with recurrence. Something appears again: a shape, a gesture, a color relation, a composition, a sequence, a motif."
+    }
+  ],
+  "suggested_next_source_categories": [
+    {
+      "motif": "banner",
+      "suggested_category": "Historical banners in paintings",
+      "reason": "Based on rarity_average=0.5000, viral_average=0.4000, count=2"
+    },
+    {
+      "motif": "heraldry",
+      "suggested_category": "Heraldic paintings",
+      "reason": "Based on rarity_average=0.5000, viral_average=0.4000, count=2"
+    },
+    {
+      "motif": "bird",
+      "suggested_category": "Bird symbolism in paintings",
+      "reason": "Based on rarity_average=0.3000, viral_average=0.4000, count=1"
+    },
+    {
+      "motif": "religious",
+      "suggested_category": "Religious art paintings",
+      "reason": "Based on rarity_average=0.2667, viral_average=0.4500, count=3"
+    },
+    {
+      "motif": "altar",
+      "suggested_category": "Church interiors in painting",
+      "reason": "Based on rarity_average=0.2500, viral_average=0.3750, count=2"
+    },
+    {
+      "motif": "manuscript",
+      "suggested_category": "Manuscript illuminations",
+      "reason": "Based on rarity_average=0.2000, viral_average=0.4500, count=2"
+    },
+    {
+      "motif": "portrait",
+      "suggested_category": "Portrait paintings",
+      "reason": "Based on rarity_average=0.2000, viral_average=0.3227, count=11"
+    },
+    {
+      "motif": "sword",
+      "suggested_category": "Portrait paintings with swords",
+      "reason": "Based on rarity_average=0.2000, viral_average=0.2000, count=1"
+    },
+    {
+      "motif": "window",
+      "suggested_category": "Window scenes in paintings",
+      "reason": "Based on rarity_average=0.1500, viral_average=0.1500, count=2"
+    },
+    {
+      "motif": "bridge",
+      "suggested_category": "Bridge scenes in paintings",
+      "reason": "Based on rarity_average=0.0000, viral_average=0.0000, count=2"
+    }
+  ]
+}
