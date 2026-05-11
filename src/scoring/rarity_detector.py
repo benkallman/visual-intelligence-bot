@@ -21,6 +21,9 @@ CONSTRAINTS_PATH = os.path.join(
 RECORDS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "records")
 SOURCES_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "sources")
 RARITY_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "rarity")
+ARCHIVE_CONTEXT_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "..", "data", "archive", "archive_context.json"
+)
 
 _DIMENSIONS = (
     "source_rarity",
@@ -84,6 +87,59 @@ def _load_json(path: str) -> dict | None:
         return None
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _archive_summary(reference_bits: list[str]) -> dict | None:
+    archive_context = _load_json(ARCHIVE_CONTEXT_PATH)
+    if not archive_context:
+        return None
+
+    motifs = archive_context.get("motifs", [])
+    patterns = archive_context.get("patterns", [])
+    visual_principles = archive_context.get("visual_principles", [])
+    print(f"[archive] scoring context loaded: {len(motifs)} motifs, {len(patterns)} patterns")
+
+    reference_tokens = _tokens(" ".join(bit for bit in reference_bits if bit))
+
+    def select(entries: list[dict], limit: int = 3) -> list[dict]:
+        ranked = sorted(
+            entries,
+            key=lambda entry: (
+                len(reference_tokens & _tokens(" ".join([
+                    str(entry.get("heading", "")),
+                    str(entry.get("text", "")),
+                    str(entry.get("file", "")),
+                ]))),
+                len(_tokens(str(entry.get("text", "")))),
+            ),
+            reverse=True,
+        )
+        picked: list[dict] = []
+        for entry in ranked:
+            compact = {
+                "file": str(entry.get("file", "")),
+                "heading": str(entry.get("heading", "")),
+                "text": str(entry.get("text", ""))[:220],
+            }
+            if compact not in picked:
+                picked.append(compact)
+            if len(picked) >= limit:
+                break
+        return picked
+
+    return {
+        "files_loaded": int(archive_context.get("files_loaded", 0) or 0),
+        "motif_count": len(motifs),
+        "pattern_count": len(patterns),
+        "visual_principle_count": len(visual_principles),
+        "motif_examples": select(motifs),
+        "pattern_examples": select(patterns),
+        "visual_principle_examples": select(visual_principles),
+        "usage_note": (
+            "Reference only. Archive context may inform motif_rarity and archive-level pattern framing, "
+            "but must not override the pass1 literal description or image-grounded evidence."
+        ),
+    }
 
 
 def _load_records(prefix: str) -> list[dict]:
@@ -187,7 +243,13 @@ def _build_payload(interpretation_record: dict, source_record: dict) -> tuple[di
         for ref in interpretation_record.get("pass2", {}).get("recurrence_references", [])
         if isinstance(ref, dict)
     ]
-
+    archive_context_summary = _archive_summary(
+        [
+            interpretation_record.get("pass1", {}).get("description", ""),
+            interpretation_record.get("pass1", {}).get("composition_notes", ""),
+            *new_elements,
+        ]
+    )
     payload = {
         "source_metadata": {
             "source_id": current_source_id,
@@ -207,6 +269,7 @@ def _build_payload(interpretation_record: dict, source_record: dict) -> tuple[di
         },
         "recurrence_matches": recurrence_refs,
         "motif_matches": motif_hits,
+        "archive_context_summary": archive_context_summary,
     }
     return payload, rare_elements[:5], common_elements[:5]
 
@@ -223,7 +286,12 @@ def run_rarity_detector(interpretation_record: dict, source_record: dict) -> dic
 
     request = LLMRequest(
         system=f"{constraints}\n\n{scorer_prompt}",
-        user_text=f"Evaluate rarity for this record:\n\n```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn valid JSON only.",
+        user_text=(
+            "Evaluate rarity for this record. Archive context summary is optional reference material only. "
+            "It may influence motif_rarity and archive-level framing, but it must not override the pass1 literal "
+            "description or other image-grounded evidence.\n\n"
+            f"```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn valid JSON only."
+        ),
         max_tokens=700,
         want_json=True,
     )

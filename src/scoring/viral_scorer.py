@@ -7,7 +7,7 @@ Runs after interpretation is complete.
 import datetime
 import json
 import os
-
+import re
 from src.providers import complete, LLMRequest, ProviderUnavailableError
 
 PROMPT_PATH = os.path.join(
@@ -15,6 +15,9 @@ PROMPT_PATH = os.path.join(
 )
 CONSTRAINTS_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..", "prompts", "_system_constraints.md"
+)
+ARCHIVE_CONTEXT_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "..", "data", "archive", "archive_context.json"
 )
 
 _DIMENSIONS = (
@@ -46,6 +49,74 @@ def _clamp_score(value) -> float:
     return max(0.0, min(1.0, score))
 
 
+def _load_json(path: str) -> dict | None:
+    if not os.path.isfile(path):
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", str(text or "").lower())
+        if len(token) > 2
+    }
+
+
+def _archive_summary(reference_bits: list[str]) -> dict | None:
+    archive_context = _load_json(ARCHIVE_CONTEXT_PATH)
+    if not archive_context:
+        return None
+
+    motifs = archive_context.get("motifs", [])
+    patterns = archive_context.get("patterns", [])
+    visual_principles = archive_context.get("visual_principles", [])
+    print(f"[archive] scoring context loaded: {len(motifs)} motifs, {len(patterns)} patterns")
+
+    reference_tokens = _tokens(" ".join(bit for bit in reference_bits if bit))
+
+    def select(entries: list[dict], limit: int = 3) -> list[dict]:
+        ranked = sorted(
+            entries,
+            key=lambda entry: (
+                len(reference_tokens & _tokens(" ".join([
+                    str(entry.get("heading", "")),
+                    str(entry.get("text", "")),
+                    str(entry.get("file", "")),
+                ]))),
+                len(_tokens(str(entry.get("text", "")))),
+            ),
+            reverse=True,
+        )
+        picked: list[dict] = []
+        for entry in ranked:
+            compact = {
+                "file": str(entry.get("file", "")),
+                "heading": str(entry.get("heading", "")),
+                "text": str(entry.get("text", ""))[:220],
+            }
+            if compact not in picked:
+                picked.append(compact)
+            if len(picked) >= limit:
+                break
+        return picked
+
+    return {
+        "files_loaded": int(archive_context.get("files_loaded", 0) or 0),
+        "motif_count": len(motifs),
+        "pattern_count": len(patterns),
+        "visual_principle_count": len(visual_principles),
+        "motif_examples": select(motifs),
+        "pattern_examples": select(patterns),
+        "visual_principle_examples": select(visual_principles),
+        "usage_note": (
+            "Reference only. Archive context may inform brand_fit, motif framing, and recommended_use, "
+            "but must not override the pass1 literal description or other image-grounded evidence."
+        ),
+    }
+
+
 def run_viral_scorer(interpretation_record: dict, source_record: dict, rarity_record: dict | None = None) -> dict:
     source_id = interpretation_record["source_id"]
     viral_record_id = source_id.replace("src_", "vir_", 1)
@@ -74,11 +145,24 @@ def run_viral_scorer(interpretation_record: dict, source_record: dict, rarity_re
         "uncertainty_notes": pass2.get("uncertainty_notes"),
         "rarity_score": (rarity_record or {}).get("rarity_score"),
         "rarity_reason": (rarity_record or {}).get("reason"),
+        "archive_context_summary": _archive_summary(
+            [
+                pass1.get("description", ""),
+                pass1.get("composition_notes", ""),
+                pass2.get("interpretive_notes", ""),
+                *(key_elements or []),
+            ]
+        ),
     }
 
     request = LLMRequest(
         system=f"{constraints}\n\n{scorer_prompt}",
-        user_text=f"Score this accepted image record:\n\n```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn valid JSON only.",
+        user_text=(
+            "Score this accepted image record. Archive context summary is optional reference material only. "
+            "It may influence brand_fit, motif framing, and recommended_use, but it must not override the pass1 "
+            "literal description or other image-grounded evidence.\n\n"
+            f"```json\n{json.dumps(payload, indent=2)}\n```\n\nReturn valid JSON only."
+        ),
         max_tokens=512,
         want_json=True,
     )
