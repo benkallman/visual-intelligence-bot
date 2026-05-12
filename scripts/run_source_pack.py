@@ -75,6 +75,18 @@ _OPEN_LICENSE_PATTERNS = [
 # Skip images smaller than this in both dimensions (likely icons/thumbnails).
 _MIN_IMAGE_PX = 300
 
+# File extensions that are never raster images and must not be sent to ingest.py.
+# Checked against both the Commons page URL (fast, pre-fetch) and the direct
+# CDN URL returned by the API.
+_NON_IMAGE_EXTS = frozenset({
+    ".pdf", ".djvu", ".txt", ".zip",
+    ".mp4", ".webm", ".ogg", ".ogv", ".oga",
+    ".svg", ".wav", ".flac", ".mid", ".midi",
+})
+
+# Extensions that are positively known to be raster images.
+_IMAGE_EXTS = frozenset({".jpg", ".jpeg", ".png", ".webp", ".gif", ".tif", ".tiff"})
+
 
 # ---------------------------------------------------------------------------
 # Wikimedia API helpers
@@ -158,7 +170,7 @@ def _fetch_file_metadata(page_url: str) -> dict | None:
         "action": "query",
         "titles": file_title,
         "prop": "imageinfo",
-        "iiprop": "url|size|extmetadata",
+        "iiprop": "url|size|mime|extmetadata",
         "iiextmetadatafilter": "ObjectName|Artist|DateTimeOriginal|LicenseShortName",
         "format": "json",
     }
@@ -180,6 +192,7 @@ def _fetch_file_metadata(page_url: str) -> dict | None:
     return {
         "page_url": page_url,
         "url": info.get("url", ""),
+        "mime": info.get("mime", ""),
         "width": info.get("width") or 0,
         "height": info.get("height") or 0,
         "title": _strip_html(extmeta.get("ObjectName", {}).get("value") or page.get("title") or file_title),
@@ -187,6 +200,30 @@ def _fetch_file_metadata(page_url: str) -> dict | None:
         "date_raw": _strip_html(extmeta.get("DateTimeOriginal", {}).get("value") or ""),
         "license": _strip_html(extmeta.get("LicenseShortName", {}).get("value") or ""),
     }
+
+
+# ---------------------------------------------------------------------------
+# Non-image detection
+# ---------------------------------------------------------------------------
+
+def _url_file_ext(url: str) -> str:
+    """Return the lowercase extension from a URL, stripping any query string."""
+    path = url.split("?")[0].rstrip("/")
+    return os.path.splitext(path)[1].lower()
+
+
+def _is_non_image(url: str, mime: str = "") -> bool:
+    """Return True when the URL or MIME type indicates a non-raster-image file.
+
+    Two-stage: extension check first (cheap), then MIME type if the API
+    returned one. An empty or absent MIME is not treated as a rejection so
+    that files whose type is unknown are not silently dropped.
+    """
+    if _url_file_ext(url) in _NON_IMAGE_EXTS:
+        return True
+    if mime and not mime.startswith("image/"):
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +311,10 @@ def _run_ingest(candidate: dict, dry_run: bool) -> int:
 # ---------------------------------------------------------------------------
 
 def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> None:
+    # Force line-buffering so [source-pack] lines are not held in Python's
+    # stdout buffer while a subprocess (ingest.py) writes directly to the fd.
+    sys.stdout.reconfigure(line_buffering=True)
+
     pack_path = SOURCE_PACKS_DIR / f"{pack_id}.json"
     if not pack_path.exists():
         raise FileNotFoundError(f"Source pack not found: {pack_path}")
@@ -290,11 +331,12 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
     print()
 
     new_candidates: list[dict] = []
-    total_accepted = total_skip_date = total_skip_rights = total_skip_known = total_errored = 0
+    total_accepted = total_skip_date = total_skip_rights = total_skip_known = 0
+    total_skip_non_image = total_errored = 0
 
     for entry in queries:
         if total_accepted >= max_total:
-            print(f"[source-pack] max_total={max_total} reached — stopping discovery.")
+            print(f"[source-pack] max_total={max_total} reached -- stopping discovery.")
             break
 
         q_type = entry.get("type", "search")
@@ -308,7 +350,7 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
 
         print(f"[source-pack]   found {len(file_urls)} file(s)")
 
-        q_acc = q_sd = q_sr = q_sk = q_err = 0
+        q_acc = q_sd = q_sr = q_sk = q_sni = q_err = 0
 
         for url in file_urls:
             if total_accepted >= max_total:
@@ -319,10 +361,28 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
                 total_skip_known += 1
                 continue
 
+            # Fast pre-fetch check: reject obvious non-images by page URL extension
+            # before spending an API call on metadata.
+            if _is_non_image(url):
+                q_sni += 1
+                total_skip_non_image += 1
+                print(f"[source-pack]   skipped_non_image (url ext): {url.split('/')[-1][:60]}")
+                continue
+
             meta = _fetch_file_metadata(url)
             if meta is None:
                 q_err += 1
                 total_errored += 1
+                continue
+
+            # Post-fetch check: verify CDN URL extension and MIME type.
+            if _is_non_image(meta["url"], meta.get("mime", "")):
+                q_sni += 1
+                total_skip_non_image += 1
+                print(
+                    f"[source-pack]   skipped_non_image (mime={meta.get('mime', '?')}): "
+                    f"{meta['title'][:55]}"
+                )
                 continue
 
             # Skip tiny images (icons, thumbnails, signatures).
@@ -360,7 +420,7 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
             new_candidates.append(candidate)
             q_acc += 1
             total_accepted += 1
-            lic_display = (license_text[:25] + "…") if len(license_text) > 25 else license_text
+            lic_display = (license_text[:25] + "...") if len(license_text) > 25 else license_text
             print(
                 f"[source-pack]   accepted: {meta['title'][:55]!r} "
                 f"(year={date_year or '?'}, license={lic_display or 'unknown'})"
@@ -368,7 +428,8 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
 
         print(
             f"[source-pack]   accepted={q_acc} skipped_date={q_sd} "
-            f"skipped_rights={q_sr} skipped_known={q_sk} errored={q_err}"
+            f"skipped_rights={q_sr} skipped_non_image={q_sni} "
+            f"skipped_known={q_sk} errored={q_err}"
         )
 
     print()
@@ -376,6 +437,7 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
     print(f"[source-pack]   accepted={total_accepted}")
     print(f"[source-pack]   skipped_date={total_skip_date}")
     print(f"[source-pack]   skipped_rights={total_skip_rights}")
+    print(f"[source-pack]   skipped_non_image={total_skip_non_image}")
     print(f"[source-pack]   skipped_known={total_skip_known}")
     print(f"[source-pack]   errored={total_errored}")
 
