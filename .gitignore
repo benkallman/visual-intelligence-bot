@@ -46,6 +46,11 @@ data/flags/rejected/*.json
 # Downloaded image cache
 data/images/
 
+# Discovery / scoring runtime data
+data/candidates/
+data/rarity/
+data/social_post_log.json
+
 # Obsidian app files (keep notes, ignore app config)
 obsidian/.obsidian/
 obsidian/.trash/
@@ -58,3 +63,15 @@ logs/
 .pytest_cache/
 htmlcov/
 .coverage
+
+# Generated exports and reports (runtime outputs, may contain large binaries)
+exports/social/
+exports/social-packs/
+exports/source-packs/
+exports/public-digests/
+exports/premium/
+reports/nightly/
+reports/source-expansion/
+
+# Claude Code local config
+.claude/
