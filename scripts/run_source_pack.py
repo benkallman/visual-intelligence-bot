@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run a themed source pack: discover and ingest works from Wikimedia Commons
+Run a themed source pack: discover and/or ingest Wikimedia Commons works
 that match the pack's queries, date ceiling, and rights preference.
 
 Reads:  data/source_packs/<pack_id>.json
@@ -9,6 +9,13 @@ Writes: data/candidates/cand_*.json  (one per accepted item, tagged with pack_id
         data/records/rec_*.json       (via ingest.py subprocess)
 
 Does NOT post to X and does NOT touch post_daily_queue.py.
+
+Modes (mutually exclusive flags):
+  (default)         Discover new candidates, then immediately ingest them.
+  --discover-only   Save candidate JSON files only; do not call ingest.py.
+                    Use this to review candidates before committing to ingest.
+  --ingest-only     Ingest existing candidates for this pack that have not yet
+                    been processed; skip new discovery entirely.
 
 Each query in the pack JSON is either:
   {"type": "search",   "q": "<fulltext search term>"}
@@ -21,8 +28,13 @@ Date filtering:
     or a medium keyword (ukiyo-e, woodblock, netsuke, noh mask).
   - Items with no date and no keyword are also skipped (skipped_date).
 
+Non-image filtering:
+  - Items whose URL or MIME type indicates a non-raster file (.pdf, .djvu,
+    .svg, .mp4, etc.) are skipped before any ingest.py call is made.
+
 Usage:
-    python scripts/run_source_pack.py --pack japanese_wood_historical
+    python scripts/run_source_pack.py --pack japanese_wood_historical --max-total 10 --discover-only
+    python scripts/run_source_pack.py --pack japanese_wood_historical --ingest-only --limit-ingest 5
     python scripts/run_source_pack.py --pack japanese_wood_historical --max-total 10
     python scripts/run_source_pack.py --pack japanese_wood_historical --max-total 3 --dry-run
 """
@@ -291,7 +303,7 @@ def _save_candidate(meta: dict, pack_id: str, query: str, date_year: int | None)
 
 
 # ---------------------------------------------------------------------------
-# Ingest
+# Ingest helpers
 # ---------------------------------------------------------------------------
 
 def _run_ingest(candidate: dict, dry_run: bool) -> int:
@@ -306,29 +318,29 @@ def _run_ingest(candidate: dict, dry_run: bool) -> int:
     return subprocess.run(cmd, capture_output=False).returncode
 
 
+def _load_pack_candidates_from_disk(pack_id: str) -> list[dict]:
+    """Load all saved candidate records for pack_id from data/candidates/."""
+    if not CANDIDATES_DIR.exists():
+        return []
+    results = []
+    for path in sorted(CANDIDATES_DIR.glob("cand_*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if data.get("pack_id") == pack_id:
+            results.append(data)
+    return results
+
+
 # ---------------------------------------------------------------------------
-# Main
+# Discovery and ingest phases
 # ---------------------------------------------------------------------------
 
-def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> None:
-    # Force line-buffering so [source-pack] lines are not held in Python's
-    # stdout buffer while a subprocess (ingest.py) writes directly to the fd.
-    sys.stdout.reconfigure(line_buffering=True)
-
-    pack_path = SOURCE_PACKS_DIR / f"{pack_id}.json"
-    if not pack_path.exists():
-        raise FileNotFoundError(f"Source pack not found: {pack_path}")
-    pack = json.loads(pack_path.read_text(encoding="utf-8"))
-
+def _run_discovery(pack: dict, pack_id: str, max_total: int, per_query_limit: int) -> list[dict]:
+    """Run the discovery loop for all queries in pack; return new candidate dicts."""
     date_max = pack.get("date_max", 1956)
     queries = pack.get("queries", [])
-
-    print(f"[source-pack] pack={pack_id}")
-    print(f"[source-pack] label={pack['label']}")
-    print(f"[source-pack] date_max={date_max}")
-    print(f"[source-pack] queries={len(queries)}")
-    print(f"[source-pack] max_total={max_total}  dry_run={dry_run}")
-    print()
 
     new_candidates: list[dict] = []
     total_accepted = total_skip_date = total_skip_rights = total_skip_known = 0
@@ -361,8 +373,6 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
                 total_skip_known += 1
                 continue
 
-            # Fast pre-fetch check: reject obvious non-images by page URL extension
-            # before spending an API call on metadata.
             if _is_non_image(url):
                 q_sni += 1
                 total_skip_non_image += 1
@@ -375,7 +385,6 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
                 total_errored += 1
                 continue
 
-            # Post-fetch check: verify CDN URL extension and MIME type.
             if _is_non_image(meta["url"], meta.get("mime", "")):
                 q_sni += 1
                 total_skip_non_image += 1
@@ -385,13 +394,11 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
                 )
                 continue
 
-            # Skip tiny images (icons, thumbnails, signatures).
             if meta["width"] < _MIN_IMAGE_PX and meta["height"] < _MIN_IMAGE_PX:
                 q_err += 1
                 total_errored += 1
                 continue
 
-            # --- Date filter ---
             date_year = _parse_year(meta["date_raw"])
             if date_year is not None:
                 if date_year > date_max:
@@ -399,22 +406,18 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
                     total_skip_date += 1
                     continue
             else:
-                # No parseable date — allow only when the context implies a
-                # pre-1956 Japanese historical period or medium.
                 context = f"{meta['title']} {meta['artist']} {meta['date_raw']} {q_label}"
                 if not _has_historical_keyword(context):
                     q_sd += 1
                     total_skip_date += 1
                     continue
 
-            # --- Rights filter --- prefer open; skip if explicitly closed
             license_text = meta.get("license") or ""
             if license_text and not _is_open_license(license_text):
                 q_sr += 1
                 total_skip_rights += 1
                 continue
 
-            # Accept
             path = _save_candidate(meta, pack_id, q_label, date_year)
             candidate = json.loads(path.read_text(encoding="utf-8"))
             new_candidates.append(candidate)
@@ -441,19 +444,31 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
     print(f"[source-pack]   skipped_known={total_skip_known}")
     print(f"[source-pack]   errored={total_errored}")
 
-    if not new_candidates:
-        print("[source-pack] No new candidates — nothing to ingest.")
-        return
+    return new_candidates
 
-    print(f"\n[source-pack] Ingesting {len(new_candidates)} new candidate(s)...")
-    ingest_counts = {"processed": 0, "rejected": 0, "errored": 0}
 
-    for candidate in new_candidates:
+def _run_ingest_phase(candidates: list[dict], limit_ingest: int | None, dry_run: bool) -> None:
+    """Ingest a list of candidates, skipping already-processed and non-image ones."""
+    to_process = candidates[:limit_ingest] if limit_ingest is not None else candidates
+
+    eligible = []
+    for candidate in to_process:
         cid = candidate["candidate_id"]
         sid = cid.replace("cand_", "src_", 1)
         if (SOURCES_DIR / f"{sid}.json").exists():
             print(f"[source-pack]   SKIP {cid} (already ingested)")
             continue
+        cdn_url = candidate.get("direct_image_url", "")
+        if _is_non_image(cdn_url):
+            print(f"[source-pack]   SKIP {cid} (non-image: {cdn_url.split('/')[-1][:50]})")
+            continue
+        eligible.append(candidate)
+
+    print(f"[source-pack] Ingesting {len(eligible)} candidate(s)...")
+    ingest_counts = {"processed": 0, "rejected": 0, "errored": 0}
+
+    for candidate in eligible:
+        cid = candidate["candidate_id"]
         title_short = (candidate.get("title") or "")[:50]
         print(f"[source-pack]   ingest {cid}: {title_short!r}")
         code = _run_ingest(candidate, dry_run)
@@ -473,14 +488,96 @@ def main(pack_id: str, max_total: int, per_query_limit: int, dry_run: bool) -> N
     print(f"[source-pack]   errored={ingest_counts['errored']}")
 
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main(
+    pack_id: str,
+    max_total: int,
+    per_query_limit: int,
+    dry_run: bool,
+    discover_only: bool = False,
+    ingest_only: bool = False,
+    limit_ingest: int | None = None,
+) -> None:
+    # Force line-buffering so [source-pack] lines are not held in Python's
+    # stdout buffer while a subprocess (ingest.py) writes directly to the fd.
+    sys.stdout.reconfigure(line_buffering=True, errors="replace")
+
+    pack_path = SOURCE_PACKS_DIR / f"{pack_id}.json"
+    if not pack_path.exists():
+        raise FileNotFoundError(f"Source pack not found: {pack_path}")
+    pack = json.loads(pack_path.read_text(encoding="utf-8"))
+
+    mode = "discover-only" if discover_only else ("ingest-only" if ingest_only else "discover+ingest")
+    print(f"[source-pack] pack={pack_id}")
+    print(f"[source-pack] label={pack['label']}")
+    print(f"[source-pack] date_max={pack.get('date_max', 1956)}")
+    print(f"[source-pack] mode={mode}  dry_run={dry_run}")
+    print()
+
+    if ingest_only:
+        all_candidates = _load_pack_candidates_from_disk(pack_id)
+        print(f"[source-pack] Loaded {len(all_candidates)} existing candidate(s) for pack={pack_id!r}")
+        if not all_candidates:
+            print("[source-pack] No candidates on disk -- run without --ingest-only first.")
+            return
+        _run_ingest_phase(all_candidates, limit_ingest, dry_run)
+        return
+
+    print(f"[source-pack] queries={len(pack.get('queries', []))}")
+    print(f"[source-pack] max_total={max_total}")
+    print()
+
+    new_candidates = _run_discovery(pack, pack_id, max_total, per_query_limit)
+
+    if discover_only:
+        print(
+            f"[source-pack] --discover-only: {len(new_candidates)} new candidate(s) saved. "
+            f"Skipping ingest."
+        )
+        return
+
+    if not new_candidates:
+        print("[source-pack] No new candidates -- nothing to ingest.")
+        return
+
+    _run_ingest_phase(new_candidates, limit_ingest, dry_run)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Discover and ingest Wikimedia Commons works from a source pack."
     )
     parser.add_argument("--pack", required=True, help="Pack ID (matches data/source_packs/<pack>.json)")
-    parser.add_argument("--max-total", type=int, default=20, help="Max candidates to accept across all queries (default: 20)")
-    parser.add_argument("--per-query", type=int, default=20, help="Max files to fetch per query (default: 20)")
-    parser.add_argument("--dry-run", action="store_true", help="Save candidates but skip ingest.py calls")
+    parser.add_argument(
+        "--max-total", type=int, default=20,
+        help="Max candidates to accept across all queries during discovery (default: 20)",
+    )
+    parser.add_argument(
+        "--per-query", type=int, default=20,
+        help="Max files to fetch per query (default: 20)",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Save candidates but skip ingest.py calls",
+    )
+    parser.add_argument(
+        "--limit-ingest", type=int, default=None,
+        help="Cap the number of candidates sent to ingest.py (default: no limit)",
+    )
+
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
+        "--discover-only", action="store_true",
+        help="Save candidate JSON files only; do not call ingest.py",
+    )
+    mode_group.add_argument(
+        "--ingest-only", action="store_true",
+        help="Ingest existing saved candidates for this pack; skip discovery",
+    )
+
     args = parser.parse_args()
     try:
         main(
@@ -488,6 +585,9 @@ if __name__ == "__main__":
             max_total=args.max_total,
             per_query_limit=args.per_query,
             dry_run=args.dry_run,
+            discover_only=args.discover_only,
+            ingest_only=args.ingest_only,
+            limit_ingest=args.limit_ingest,
         )
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"[source-pack] Error: {exc}", file=sys.stderr)

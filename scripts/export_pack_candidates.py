@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import sys
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -127,6 +128,7 @@ def _recommended_use(rarity: float | None, viral: float | None) -> str:
 # ---------------------------------------------------------------------------
 
 def main(pack_id: str, date_str: str) -> None:
+    sys.stdout.reconfigure(errors="replace")
     candidates = _load_pack_candidates(pack_id)
 
     print(f"[export-pack] pack={pack_id}")
