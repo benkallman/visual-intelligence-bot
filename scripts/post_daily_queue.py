@@ -8,15 +8,21 @@ posted and enforces minimum spacing between posts.
 
 Behavior:
 - Discovers all rank folders under exports/social/<date>/ in rank order.
+- If none exist and --auto-build-pack is set, builds them by calling
+  export_pack_candidates and export_pack_social --copy-to-social.
 - Skips ranks already logged in data/social_post_log.json for that date
   (including ranks marked skipped_duplicate or skipped_over_280).
 - Stops cleanly if the daily max-posts cap is already reached.
 - Waits (prints next-allowed time and exits 0) if not enough time has elapsed
   since the last post across any date.
-- Before posting, checks for duplicate content (folder slug, image hash,
-  source URL, post text) against the full log and skips if a match is found.
-- If post.txt exceeds 280 chars, repairs it in-place using metadata.json then
-  continues; skips the rank if repair is not possible.
+- Scans eligible ranks in order; for each one:
+    - Checks for duplicate content (folder slug, image hash, source URL,
+      post text) against the full log.
+    - If duplicate: logs the skip (in --send mode) and continues to the
+      next rank in the same invocation.
+    - If post.txt exceeds 280 chars, repairs it in-place using metadata.json
+      then continues; if repair fails, logs the skip and continues.
+    - On the first postable rank: previews it (or posts it with --send).
 - Posts only the single next eligible rank per invocation.
 - Dry-run by default; --send is required to post to X.
 - On a successful send, appends one entry to data/social_post_log.json.
@@ -24,7 +30,10 @@ Behavior:
 The script is designed to be called in a polling loop:
 
     while ($true) {
-        python scripts/post_daily_queue.py --date today --max-posts 3 --min-minutes-between-posts 180 --send
+        python scripts/post_daily_queue.py --date today --max-posts 3 `
+            --min-minutes-between-posts 180 `
+            --auto-build-pack japanese_wood_historical --auto-build-top 3 `
+            --send
         Start-Sleep -Seconds 1800
     }
 
@@ -34,6 +43,8 @@ Usage:
     python scripts/post_daily_queue.py --date today
     python scripts/post_daily_queue.py --date today --max-posts 3 --min-minutes-between-posts 180
     python scripts/post_daily_queue.py --date today --max-posts 3 --min-minutes-between-posts 180 --send
+    python scripts/post_daily_queue.py --date today --max-posts 3 --min-minutes-between-posts 180 \\
+        --auto-build-pack japanese_wood_historical --auto-build-top 3 --send
 """
 
 from __future__ import annotations
@@ -121,6 +132,39 @@ def _discover_rank_folders(date_str: str) -> list[tuple[int, Path]]:
         if m:
             result.append((int(m.group(1)), folder))
     return sorted(result, key=lambda pair: pair[0])
+
+
+# ---------------------------------------------------------------------------
+# Auto-build from source pack
+# ---------------------------------------------------------------------------
+
+def _auto_build(pack_id: str, date_str: str, top: int) -> None:
+    """Build exports/social/<date>/ from a source pack by calling the export pipeline."""
+    try:
+        import export_pack_candidates as _epc
+        import export_pack_social as _eps
+    except ImportError as exc:
+        print(f"[queue] auto-build: cannot import pack scripts: {exc}", file=sys.stderr)
+        return
+
+    print(f"[queue] auto-build: export_pack_candidates pack={pack_id!r} date={date_str}")
+    try:
+        _epc.main(pack_id=pack_id, date_str=date_str)
+    except Exception as exc:
+        print(f"[queue] auto-build: export_pack_candidates error (continuing): {exc}")
+
+    print(f"[queue] auto-build: export_pack_social pack={pack_id!r} date={date_str} top={top} --copy-to-social")
+    try:
+        _eps.main(
+            pack_id=pack_id,
+            date_str=date_str,
+            top=top,
+            dry_run=False,
+            copy_to_social=True,
+            force=False,
+        )
+    except Exception as exc:
+        print(f"[queue] auto-build: export_pack_social error: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -310,8 +354,18 @@ def _repair_post_text(folder: Path, current_text: str) -> str | None:
 # Main
 # ---------------------------------------------------------------------------
 
-def main(date_value: str, max_posts: int, min_minutes: int, send: bool) -> None:
-    """Evaluate queue state and post (or preview) the next eligible rank.
+def main(
+    date_value: str,
+    max_posts: int,
+    min_minutes: int,
+    send: bool,
+    auto_build_pack: str | None = None,
+    auto_build_top: int = 3,
+) -> None:
+    """Scan the queue and post (or preview) the next eligible rank.
+
+    Skips duplicate and over-limit ranks within one invocation rather than
+    stopping at the first problem. Posts at most one item per call.
 
     Exits 0 in all expected non-error states (wait, cap reached, nothing left).
     Exits 1 only on missing credentials or an API error.
@@ -326,8 +380,8 @@ def main(date_value: str, max_posts: int, min_minutes: int, send: bool) -> None:
         e for e in log
         if e.get("date") == date_str and e.get("status", "posted") in _POSTED_STATUSES
     ]
-    # Ranks we must not retry (posted + skipped).
-    done_ranks_today = {
+    # Ranks we must not retry (posted + all skip varieties).
+    done_ranks_today: set[int] = {
         e["rank"] for e in log
         if e.get("date") == date_str and e.get("status", "posted") in _DONE_STATUSES
     }
@@ -359,9 +413,25 @@ def main(date_value: str, max_posts: int, min_minutes: int, send: bool) -> None:
                 return
 
     rank_folders = _discover_rank_folders(date_str)
+
+    if not rank_folders and auto_build_pack:
+        print(
+            f"[queue] no exports for {date_str} — "
+            f"auto-building from pack {auto_build_pack!r} (top {auto_build_top})"
+        )
+        _auto_build(auto_build_pack, date_str, auto_build_top)
+        rank_folders = _discover_rank_folders(date_str)
+
     if not rank_folders:
         print(f"[queue] no export folders found under exports/social/{date_str}/")
-        print(f"[queue] run: python scripts/select_best_content.py --top {max_posts} --date {date_str}")
+        if auto_build_pack:
+            print(
+                f"[queue] auto-build produced no rank folders — "
+                f"check that pack {auto_build_pack!r} has candidates with raster images"
+            )
+        else:
+            print(f"[queue] run: python scripts/select_best_content.py --top {max_posts} --date {date_str}")
+            print(f"[queue] or pass --auto-build-pack <pack_id> to build automatically")
         return
 
     eligible = [(rank, folder) for rank, folder in rank_folders if rank not in done_ranks_today]
@@ -369,108 +439,112 @@ def main(date_value: str, max_posts: int, min_minutes: int, send: bool) -> None:
         print(f"[queue] all available ranks already posted/skipped for {date_str}.")
         return
 
-    next_rank, next_folder = eligible[0]
-    print(f"[queue] next eligible rank={next_rank}  folder={next_folder.name}")
-
-    bundle = _read_post_bundle(date_str, next_rank)
-
-    # Build duplicate-detection index from the full log (runs once, reads from disk).
+    # Build duplicate-detection index once from the full log.
     dup_signals = _build_dup_signals(log)
 
-    # --- Duplicate check ---
-    dup_reason = _check_duplicate(next_folder, bundle, dup_signals)
-    if dup_reason:
-        print(f"[queue] skipped duplicate rank={next_rank}  reason={dup_reason}")
-        if send:
-            log.append({
-                "date": date_str,
-                "rank": next_rank,
-                "folder": str(next_folder),
-                "status": "skipped_duplicate",
-                "reason": dup_reason,
-                "skipped_at": datetime.datetime.now().isoformat(timespec="seconds"),
-            })
-            _save_log(log)
-        else:
-            print("[queue] dry run — skip not recorded to log.")
-        return
+    # Scan eligible ranks in order, skipping problems, until we find one to post.
+    for rank, folder in eligible:
 
-    # --- 280-char check and repair ---
-    char_count = len(bundle["text"])
-    if char_count > MAX_POST_CHARS:
-        repaired = _repair_post_text(next_folder, bundle["text"])
-        if repaired and len(repaired) <= MAX_POST_CHARS:
-            print(f"[queue] repaired post length rank={next_rank}  was={char_count} now={len(repaired)}")
-            (next_folder / "post.txt").write_text(repaired + "\n", encoding="utf-8")
-            bundle["text"] = repaired
-            char_count = len(repaired)
-        else:
-            print(f"[queue] skipped over 280 rank={next_rank}  chars={char_count}")
+        try:
+            bundle = _read_post_bundle(date_str, rank)
+        except FileNotFoundError as exc:
+            print(f"[queue] skip rank={rank}: {exc}")
+            continue
+
+        # --- Duplicate check ---
+        dup_reason = _check_duplicate(folder, bundle, dup_signals)
+        if dup_reason:
+            print(f"[queue] skipped duplicate rank={rank}  folder={folder.name}  reason={dup_reason}")
             if send:
                 log.append({
                     "date": date_str,
-                    "rank": next_rank,
-                    "folder": str(next_folder),
-                    "status": "skipped_over_280",
-                    "reason": f"post text is {char_count} chars (limit {MAX_POST_CHARS}), repair not possible",
+                    "rank": rank,
+                    "folder": str(folder),
+                    "status": "skipped_duplicate",
+                    "reason": dup_reason,
                     "skipped_at": datetime.datetime.now().isoformat(timespec="seconds"),
                 })
                 _save_log(log)
             else:
-                print("[queue] dry run — skip not recorded to log.")
+                print("[queue] dry run: next run with --send will record this skip and advance")
+            continue
+
+        # --- 280-char check and repair ---
+        char_count = len(bundle["text"])
+        if char_count > MAX_POST_CHARS:
+            repaired = _repair_post_text(folder, bundle["text"])
+            if repaired and len(repaired) <= MAX_POST_CHARS:
+                print(f"[queue] repaired post length rank={rank}  was={char_count} now={len(repaired)}")
+                (folder / "post.txt").write_text(repaired + "\n", encoding="utf-8")
+                bundle["text"] = repaired
+                char_count = len(repaired)
+            else:
+                print(f"[queue] skipped over 280 rank={rank}  chars={char_count}")
+                if send:
+                    log.append({
+                        "date": date_str,
+                        "rank": rank,
+                        "folder": str(folder),
+                        "status": "skipped_over_280",
+                        "reason": (
+                            f"post text is {char_count} chars "
+                            f"(limit {MAX_POST_CHARS}), repair not possible"
+                        ),
+                        "skipped_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                    })
+                    _save_log(log)
+                else:
+                    print("[queue] dry run: next run with --send will record this skip and advance")
+                continue
+
+        # --- This rank is postable ---
+        print(f"[queue] next eligible rank={rank}  folder={folder.name}")
+        limit_note = f"[within {MAX_POST_CHARS}]"
+        print(f"[queue] characters={char_count} {limit_note}")
+        print("[queue] preview:")
+        print()
+        print(bundle["text"])
+        print()
+
+        if not send:
+            print("[queue] dry run only. Use --send to post to X.")
             return
 
-    within_limit = char_count <= MAX_POST_CHARS
-    limit_note = (
-        f"[within {MAX_POST_CHARS}]" if within_limit
-        else f"[EXCEEDS limit by {char_count - MAX_POST_CHARS}]"
-    )
-    print(f"[queue] characters={char_count} {limit_note}")
-    print("[queue] preview:")
-    print()
-    print(bundle["text"])
-    print()
+        # Credentials are loaded only in send mode so dry runs need no env vars.
+        resolved = load_social_env(str(ROOT_DIR))
+        missing = [key for key in SEND_REQUIRED_VARS if not resolved[key]["present"]]
+        if missing:
+            print(f"[queue] Error: missing credentials: {', '.join(missing)}", file=sys.stderr)
+            sys.exit(1)
 
-    if not send:
-        print("[queue] dry run only. Use --send to post to X.")
-        return
+        credentials = {key: str(resolved[key]["value"]) for key in SEND_REQUIRED_VARS}
+        response = _send_post(bundle, credentials)
 
-    if not within_limit:
-        # Should not be reachable after the repair block above, but guard anyway.
-        print(f"[queue] post exceeds {MAX_POST_CHARS} chars — aborting send.", file=sys.stderr)
-        sys.exit(1)
+        tweet_id = None
+        if isinstance(response, dict):
+            tweet_id = (response.get("data") or {}).get("id")
 
-    # Credentials are loaded only in send mode so dry runs need no env vars.
-    resolved = load_social_env(str(ROOT_DIR))
-    missing = [key for key in SEND_REQUIRED_VARS if not resolved[key]["present"]]
-    if missing:
-        print(f"[queue] Error: missing credentials: {', '.join(missing)}", file=sys.stderr)
-        sys.exit(1)
+        entry = {
+            "date": date_str,
+            "rank": rank,
+            "folder": str(folder),
+            "tweet_id": tweet_id,
+            "posted_at": datetime.datetime.now().isoformat(timespec="seconds"),
+            "text_preview": bundle["text"][:TEXT_PREVIEW_MAX],
+            "status": "posted",
+            "image_sha256": _image_sha256(bundle["image_path"]),
+            "post_text_sha256": hashlib.sha256(_normalize_text(bundle["text"]).encode()).hexdigest(),
+            "source_url": _read_source_url(folder),
+        }
+        log.append(entry)
+        _save_log(log)
 
-    credentials = {key: str(resolved[key]["value"]) for key in SEND_REQUIRED_VARS}
-    response = _send_post(bundle, credentials)
+        print(f"[queue] posted tweet_id={tweet_id}")
+        print(f"[queue] log updated: {LOG_PATH}")
+        return  # One post per invocation.
 
-    tweet_id = None
-    if isinstance(response, dict):
-        tweet_id = (response.get("data") or {}).get("id")
-
-    entry = {
-        "date": date_str,
-        "rank": next_rank,
-        "folder": str(next_folder),
-        "tweet_id": tweet_id,
-        "posted_at": datetime.datetime.now().isoformat(timespec="seconds"),
-        "text_preview": bundle["text"][:TEXT_PREVIEW_MAX],
-        "status": "posted",
-        "image_sha256": _image_sha256(bundle["image_path"]),
-        "post_text_sha256": hashlib.sha256(_normalize_text(bundle["text"]).encode()).hexdigest(),
-        "source_url": _read_source_url(next_folder),
-    }
-    log.append(entry)
-    _save_log(log)
-
-    print(f"[queue] posted tweet_id={tweet_id}")
-    print(f"[queue] log updated: {LOG_PATH}")
+    # All eligible ranks were skipped.
+    print(f"[queue] no eligible ranks remaining for {date_str} (all posted, skipped, or exhausted).")
 
 
 if __name__ == "__main__":
@@ -493,6 +567,19 @@ if __name__ == "__main__":
         "--send", action="store_true",
         help="Actually send to X (omit for dry run)",
     )
+    parser.add_argument(
+        "--auto-build-pack", default=None,
+        metavar="PACK_ID",
+        help=(
+            "Source pack ID to auto-build from when no social exports exist "
+            "(e.g. japanese_wood_historical)"
+        ),
+    )
+    parser.add_argument(
+        "--auto-build-top", type=int, default=3,
+        metavar="N",
+        help="Number of items to build when auto-building (default: 3)",
+    )
     args = parser.parse_args()
     try:
         main(
@@ -500,6 +587,8 @@ if __name__ == "__main__":
             max_posts=args.max_posts,
             min_minutes=args.min_minutes_between_posts,
             send=args.send,
+            auto_build_pack=args.auto_build_pack,
+            auto_build_top=args.auto_build_top,
         )
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"[queue] Error: {exc}", file=sys.stderr)
