@@ -41,6 +41,7 @@ CANDIDATES_DIR = ROOT_DIR / "data" / "candidates"
 SOURCE_PACKS_EXPORTS_DIR = ROOT_DIR / "exports" / "source-packs"
 SOCIAL_PACKS_DIR = ROOT_DIR / "exports" / "social-packs"
 SOCIAL_QUEUE_DIR = ROOT_DIR / "exports" / "social"
+LOG_PATH = ROOT_DIR / "data" / "social_post_log.json"
 
 _HEADERS = {
     "User-Agent": "visual-intelligence-bot/0.1 (+https://github.com/benkallman/visual-intelligence-bot)"
@@ -352,6 +353,63 @@ def _find_existing_slug(date_str: str, slug: str) -> Path | None:
 
 
 # ---------------------------------------------------------------------------
+# Duplicate detection against the posting log
+# ---------------------------------------------------------------------------
+
+def _load_posted_signals() -> dict:
+    """Return slug and source-URL sets extracted from data/social_post_log.json.
+
+    Covers ALL entries (posted, skipped_duplicate, skipped_over_280, backfill)
+    so candidates that were selected before but never went live are still blocked.
+    """
+    slugs: set[str] = set()
+    source_urls: set[str] = set()
+
+    if not LOG_PATH.is_file():
+        return {"slugs": slugs, "source_urls": source_urls}
+
+    try:
+        log = json.loads(LOG_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {"slugs": slugs, "source_urls": source_urls}
+
+    for entry in log:
+        folder = entry.get("folder", "")
+        if folder:
+            slug = re.sub(r"^\d{2}-", "", Path(folder).name)
+            if slug:
+                slugs.add(slug)
+        url = entry.get("source_url") or ""
+        if url:
+            source_urls.add(url)
+
+    return {"slugs": slugs, "source_urls": source_urls}
+
+
+def _candidate_dup_reason(
+    item: dict,
+    signals: dict,
+    queue_slugs: set[str],
+    force: bool,
+) -> str | None:
+    """Return a human-readable reason if this candidate should be skipped, else None."""
+    title = _clean_text(item.get("title") or "")
+    candidate_slug = _slug(title)
+
+    if candidate_slug in signals["slugs"]:
+        return f"slug already posted: {candidate_slug}"
+
+    src_url = item.get("source_url") or item.get("page_url") or ""
+    if src_url and src_url in signals["source_urls"]:
+        return f"source URL already posted: {src_url[:60]}"
+
+    if not force and candidate_slug in queue_slugs:
+        return f"already in today's queue: {candidate_slug}"
+
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -381,12 +439,43 @@ def main(pack_id: str, date_str: str, top: int, dry_run: bool, copy_to_social: b
         print("[pack-social] No raster-image candidates. Check that candidate files have direct_image_url.")
         return
 
-    # Score, rank, select top N
-    ranked = sorted(raster, key=_sort_key, reverse=True)
+    # --- Duplicate filter: exclude anything already posted / skipped / in today's queue ---
+    signals = _load_posted_signals()
+
+    # Build the set of slugs already present in exports/social/<date>/.
+    queue_slugs: set[str] = set()
+    queue_base = SOCIAL_QUEUE_DIR / date_str
+    if queue_base.is_dir():
+        for _folder in queue_base.iterdir():
+            if _folder.is_dir():
+                m = re.match(r"^\d+-(.+)$", _folder.name)
+                if m:
+                    queue_slugs.add(m.group(1))
+
+    fresh: list[dict] = []
+    n_dup = 0
+    for item in raster:
+        reason = _candidate_dup_reason(item, signals, queue_slugs, force)
+        if reason:
+            title_short = _clean_text(item.get("title") or "")[:60]
+            print(f"[pack-social] skipped already posted: {title_short}  reason={reason}")
+            n_dup += 1
+        else:
+            fresh.append(item)
+
+    print(f"[pack-social] fresh candidates after duplicate filter: {len(fresh)} ({n_dup} excluded)")
+
+    if not fresh:
+        print("[pack-social] No fresh candidates remaining after duplicate filter.")
+        print("[pack-social] All candidates have already been posted or are in today's queue.")
+        return
+
+    # Score, rank, select top N from fresh candidates only
+    ranked = sorted(fresh, key=_sort_key, reverse=True)
     selected = ranked[:top]
 
     mode_label = "dry run -- preview only" if dry_run else "writing to staging area"
-    print(f"[pack-social] Selecting top {len(selected)} of {len(raster)}  [{mode_label}]")
+    print(f"[pack-social] Selecting top {len(selected)} of {len(fresh)} fresh  [{mode_label}]")
     print()
 
     out_dir = SOCIAL_PACKS_DIR / pack_id / date_str
@@ -424,6 +513,7 @@ def main(pack_id: str, date_str: str, top: int, dry_run: bool, copy_to_social: b
 
         (folder / "post.txt").write_text(caption, encoding="utf-8")
 
+        page_url = item.get("source_url") or item.get("page_url") or ""
         meta = {
             "rank": rank,
             "pack_id": pack_id,
@@ -433,7 +523,8 @@ def main(pack_id: str, date_str: str, top: int, dry_run: bool, copy_to_social: b
             "year": year,
             "license": license_text,
             "image_url": image_url,
-            "page_url": item.get("source_url") or item.get("page_url") or "",
+            "source_url": page_url,
+            "page_url": page_url,
             "caption": caption,
             "caption_chars": char_count,
             "exported_at": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
