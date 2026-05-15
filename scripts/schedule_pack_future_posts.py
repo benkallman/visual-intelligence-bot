@@ -203,6 +203,8 @@ def _write_manifest(
     from_date_str: str,
     schedule_days: list[dict],
     write_mode: bool,
+    per_day: int,
+    daily_post_cap: int,
 ) -> None:
     out_dir = SCHEDULE_DIR / pack_id / from_date_str
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -212,6 +214,8 @@ def _write_manifest(
         "from_date": from_date_str,
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
         "write_mode": write_mode,
+        "scheduled_per_day_target": per_day,
+        "daily_post_cap": daily_post_cap,
         "days": schedule_days,
     }
     json_path = out_dir / "schedule.json"
@@ -222,7 +226,9 @@ def _write_manifest(
         f"",
         f"**From date:** {from_date_str}  ",
         f"**Generated:** {manifest['generated_at']}  ",
-        f"**Mode:** {'write' if write_mode else 'dry-run'}",
+        f"**Mode:** {'write' if write_mode else 'dry-run'}  ",
+        f"**Scheduled per-day target:** {per_day}  ",
+        f"**Daily post cap (post_daily_queue.py):** {daily_post_cap}",
         f"",
     ]
     for day in schedule_days:
@@ -326,12 +332,12 @@ def main(
         existing_count = len(existing)
         max_existing_rank = max((r for r, _ in existing), default=0)
 
-        slots_to_fill = min(per_day, max(0, daily_post_cap - existing_count))
+        slots_to_fill = max(0, per_day - existing_count)
         remaining_pool = len(ranked_pool) - pool_idx
 
         print(
             f"[schedule] date={date_str}  existing={existing_count}  "
-            f"slots={slots_to_fill}  remaining_fresh={remaining_pool}"
+            f"target={per_day}  slots={slots_to_fill}  remaining_fresh={remaining_pool}"
         )
 
         if slots_to_fill <= 0:
@@ -428,7 +434,7 @@ def main(
         print(f"[schedule] dry run complete. Use --write to download images and create folders.")
     print()
 
-    _write_manifest(pack_id, from_date_str, schedule_days, write)
+    _write_manifest(pack_id, from_date_str, schedule_days, write, per_day, daily_post_cap)
 
 
 if __name__ == "__main__":
