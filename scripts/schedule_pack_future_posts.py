@@ -15,6 +15,14 @@ Exclusion logic — a candidate is skipped when its slug or source URL appears i
 Each candidate in the ranked pool is used at most once across all scheduled
 dates so the same image cannot appear on two future days.
 
+Rate limiting:
+  --download-delay-seconds (default 5) sleeps between each image download.
+  --max-downloads-per-run  (default 25) stops after N successful downloads.
+  --retry-after-429-seconds (default 900) is printed as a cooldown suggestion
+    when Wikimedia returns HTTP 429; the run stops cleanly and exits 0.
+  Already-written folders are never removed on 429; only the in-progress
+  folder for the failing download is cleaned up.
+
 Writes a manifest to:
   exports/social-schedule/<pack>/<from-date>/schedule.json
   exports/social-schedule/<pack>/<from-date>/schedule.md
@@ -23,7 +31,10 @@ Usage:
   python scripts/schedule_pack_future_posts.py --pack japanese_wood_historical \\
       --from-date today --days 7 --per-day 20
   python scripts/schedule_pack_future_posts.py --pack japanese_wood_historical \\
-      --from-date today --days 3 --per-day 20 --write
+      --from-date today --days 7 --per-day 20 --write
+  python scripts/schedule_pack_future_posts.py --pack japanese_wood_historical \\
+      --from-date today --days 7 --per-day 20 --write \\
+      --download-delay-seconds 5 --max-downloads-per-run 25
 """
 
 from __future__ import annotations
@@ -35,7 +46,10 @@ import os
 import re
 import shutil
 import sys
+import time
 from pathlib import Path
+
+import httpx
 
 _SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _SCRIPTS_DIR)
@@ -44,7 +58,6 @@ from export_pack_social import (
     SOCIAL_PACKS_DIR,
     SOCIAL_QUEUE_DIR,
     _clean_text,
-    _download_image,
     _is_raster_url,
     _load_from_disk,
     _load_from_export,
@@ -56,6 +69,18 @@ from export_pack_social import (
 ROOT_DIR = Path(_SCRIPTS_DIR).parent
 LOG_PATH = ROOT_DIR / "data" / "social_post_log.json"
 SCHEDULE_DIR = ROOT_DIR / "exports" / "social-schedule"
+
+_HEADERS = {
+    "User-Agent": "visual-intelligence-bot/0.1 (+https://github.com/benkallman/visual-intelligence-bot)"
+}
+
+
+# ---------------------------------------------------------------------------
+# Rate-limit sentinel
+# ---------------------------------------------------------------------------
+
+class _RateLimitError(Exception):
+    """Raised when Wikimedia returns HTTP 429 Too Many Requests."""
 
 
 # ---------------------------------------------------------------------------
@@ -147,14 +172,51 @@ def _item_is_excluded(
     return None
 
 
+def _download_image_scheduled(url: str, dest: Path, delay_seconds: float) -> None:
+    """Download url to dest, sleeping delay_seconds first.
+
+    Raises _RateLimitError on HTTP 429 (Wikimedia rate limit).
+    Raises RuntimeError on any other network or content failure.
+    Never swallows exceptions — the caller decides cleanup and control flow.
+    """
+    if delay_seconds > 0:
+        time.sleep(delay_seconds)
+    try:
+        resp = httpx.get(url, headers=_HEADERS, follow_redirects=True, timeout=60)
+    except Exception as exc:
+        raise RuntimeError(f"network error: {exc}") from exc
+
+    if resp.status_code == 429:
+        raise _RateLimitError(f"HTTP 429 from Wikimedia ({url[:60]})")
+
+    try:
+        resp.raise_for_status()
+    except Exception as exc:
+        raise RuntimeError(f"HTTP {resp.status_code}: {exc}") from exc
+
+    ct = resp.headers.get("content-type", "")
+    if "text/" in ct or "html" in ct:
+        raise RuntimeError(f"URL returned HTML, not an image ({url[:60]})")
+
+    dest.write_bytes(resp.content)
+
+
 def _write_item(
     date_str: str,
     rank: int,
     item: dict,
     caption: str,
     pack_id: str,
+    download_delay: float = 0,
 ) -> Path | None:
-    """Write post.txt, metadata.json, image.jpg. Returns folder path or None on failure."""
+    """Write post.txt, metadata.json, and image.jpg for one scheduled item.
+
+    Returns the created folder path on success.
+    Returns None when the folder already exists or on a non-rate-limit download
+    failure (folder is cleaned up before returning).
+    Raises _RateLimitError when Wikimedia returns 429 (incomplete folder is
+    cleaned up before re-raising so the caller sees a consistent state).
+    """
     title = _clean_text(item.get("title") or "Untitled")
     image_url = item.get("direct_image_url") or ""
     year = item.get("date_year")
@@ -189,9 +251,13 @@ def _write_item(
     }
     (folder / "metadata.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    ok = _download_image(image_url, folder / "image.jpg")
-    if not ok:
-        print(f"  [warn] image download failed for rank={rank}, removing folder")
+    try:
+        _download_image_scheduled(image_url, folder / "image.jpg", download_delay)
+    except _RateLimitError:
+        shutil.rmtree(folder, ignore_errors=True)
+        raise  # propagate so the caller can stop the write loop
+    except RuntimeError as exc:
+        print(f"  [warn] image download failed for rank={rank}: {exc}")
         shutil.rmtree(folder, ignore_errors=True)
         return None
 
@@ -205,6 +271,7 @@ def _write_manifest(
     write_mode: bool,
     per_day: int,
     daily_post_cap: int,
+    stopped_due_to_rate_limit: bool = False,
 ) -> None:
     out_dir = SCHEDULE_DIR / pack_id / from_date_str
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -216,6 +283,7 @@ def _write_manifest(
         "write_mode": write_mode,
         "scheduled_per_day_target": per_day,
         "daily_post_cap": daily_post_cap,
+        "stopped_due_to_rate_limit": stopped_due_to_rate_limit,
         "days": schedule_days,
     }
     json_path = out_dir / "schedule.json"
@@ -228,7 +296,8 @@ def _write_manifest(
         f"**Generated:** {manifest['generated_at']}  ",
         f"**Mode:** {'write' if write_mode else 'dry-run'}  ",
         f"**Scheduled per-day target:** {per_day}  ",
-        f"**Daily post cap (post_daily_queue.py):** {daily_post_cap}",
+        f"**Daily post cap (post_daily_queue.py):** {daily_post_cap}  ",
+        f"**Stopped due to rate limit:** {stopped_due_to_rate_limit}",
         f"",
     ]
     for day in schedule_days:
@@ -267,6 +336,9 @@ def main(
     per_day: int,
     daily_post_cap: int,
     write: bool,
+    download_delay: float,
+    max_downloads: int,
+    retry_after_429: int,
 ) -> None:
     sys.stdout.reconfigure(errors="replace")
 
@@ -276,6 +348,12 @@ def main(
         f"[schedule] pack={pack_id}  from_date={from_date_str}  days={days}  "
         f"per_day={per_day}  daily_post_cap={daily_post_cap}  mode={mode_label}"
     )
+    if write:
+        print(
+            f"[schedule] download_delay={download_delay}s  "
+            f"max_downloads_per_run={max_downloads}  "
+            f"retry_after_429={retry_after_429}s"
+        )
     print()
 
     # Load candidates from the pack export for from_date
@@ -296,14 +374,12 @@ def main(
     n_non_raster = len(items) - len(raster)
     print(f"[schedule] {len(raster)} raster-image candidates ({n_non_raster} skipped -- no image URL or non-raster)")
 
-    # Build global exclusion sets (log + all existing queue + staging)
     excluded_slugs, excluded_urls = _build_exclusion_sets(pack_id)
     print(
         f"[schedule] exclusion set: {len(excluded_slugs)} slugs  {len(excluded_urls)} source URLs  "
         f"(log + all queue folders + staging)"
     )
 
-    # Filter to fresh candidates
     fresh: list[dict] = []
     n_excluded = 0
     for item in raster:
@@ -321,10 +397,20 @@ def main(
 
     ranked_pool = sorted(fresh, key=_sort_key, reverse=True)
 
+    # stop_reason tracks why we exited early: None | "rate_limited" | "download_cap"
+    stop_reason: str | None = None
+    download_count = 0
     pool_idx = 0
     schedule_days: list[dict] = []
 
     for day_offset in range(1, days + 1):
+        if stop_reason:
+            break
+        if write and download_count >= max_downloads:
+            print(f"[schedule] reached max-downloads-per-run={max_downloads}; stopping write loop")
+            stop_reason = "download_cap"
+            break
+
         target_date = from_date + datetime.timedelta(days=day_offset)
         date_str = target_date.isoformat()
 
@@ -361,13 +447,17 @@ def main(
         day_items: list[dict] = []
 
         while day_added < slots_to_fill and pool_idx < len(ranked_pool):
+            # Check per-item download cap before attempting this item
+            if write and download_count >= max_downloads:
+                stop_reason = "download_cap"
+                break
+
             item = ranked_pool[pool_idx]
             pool_idx += 1
 
             title = _clean_text(item.get("title") or "Untitled")
             item_slug = _slug(title)
 
-            # Guard against slug collision within this date's folder
             if item_slug in existing_date_slugs:
                 day_skipped_dup += 1
                 continue
@@ -392,14 +482,25 @@ def main(
             }
 
             if write:
-                folder = _write_item(date_str, rank, item, caption, pack_id)
+                try:
+                    folder = _write_item(
+                        date_str, rank, item, caption, pack_id,
+                        download_delay=download_delay,
+                    )
+                except _RateLimitError:
+                    print(f"[schedule] hit Wikimedia 429; stopping downloads until later")
+                    stop_reason = "rate_limited"
+                    break  # break inner while; day entry will be recorded below
+
                 if folder is None:
                     day_item["status"] = "write_failed_or_exists"
                     day_items.append(day_item)
                     day_skipped_dup += 1
                     continue
+
+                download_count += 1
                 day_item["status"] = "written"
-                print(f"  [ok] exports/social/{date_str}/{folder_name}/")
+                print(f"  [ok] exports/social/{date_str}/{folder_name}/  [download {download_count}/{max_downloads}]")
             else:
                 day_item["status"] = "planned"
 
@@ -424,17 +525,32 @@ def main(
     total_added = sum(d["added"] for d in schedule_days)
     total_skipped = sum(d["skipped_duplicate"] for d in schedule_days)
     remaining = len(ranked_pool) - pool_idx
+    stopped_due_to_rate_limit = (stop_reason == "rate_limited")
 
     print(f"[schedule] total added={total_added}  skipped={total_skipped}  remaining_pool={remaining}")
     print()
 
-    if write:
+    if stop_reason == "rate_limited":
+        print(
+            f"[schedule] stopped early: Wikimedia 429 rate limit hit.  "
+            f"Re-run after {retry_after_429}s ({retry_after_429 // 60}min) to continue filling."
+        )
+    elif stop_reason == "download_cap":
+        print(
+            f"[schedule] stopped early: reached max-downloads-per-run={max_downloads}.  "
+            f"Re-run to continue filling remaining slots."
+        )
+    elif write:
         print(f"[schedule] write complete. {total_added} item(s) scheduled across {len(schedule_days)} day(s).")
     else:
         print(f"[schedule] dry run complete. Use --write to download images and create folders.")
     print()
 
-    _write_manifest(pack_id, from_date_str, schedule_days, write, per_day, daily_post_cap)
+    _write_manifest(
+        pack_id, from_date_str, schedule_days, write,
+        per_day, daily_post_cap,
+        stopped_due_to_rate_limit=stopped_due_to_rate_limit,
+    )
 
 
 if __name__ == "__main__":
@@ -447,7 +563,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--from-date", default="today",
-        help="Base date: YYYY-MM-DD or 'today'. Scheduling fills from-date+1 through from-date+days (default: today)",
+        help="Base date: YYYY-MM-DD or 'today'. Fills from-date+1 through from-date+days (default: today)",
     )
     parser.add_argument(
         "--days", type=int, default=7,
@@ -459,11 +575,26 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--daily-post-cap", type=int, default=5,
-        help="Maximum total items per date folder; filling stops when existing + added reaches this cap (default: 5)",
+        help="Maximum total items per date folder (default: 5); informational for the manifest",
     )
     parser.add_argument(
         "--write", action="store_true",
         help="Download images and write queue folders. Dry-run by default.",
+    )
+    parser.add_argument(
+        "--download-delay-seconds", type=float, default=5,
+        metavar="N",
+        help="Seconds to sleep between image downloads to avoid rate limits (default: 5)",
+    )
+    parser.add_argument(
+        "--max-downloads-per-run", type=int, default=25,
+        metavar="N",
+        help="Stop after N successful image downloads per invocation (default: 25)",
+    )
+    parser.add_argument(
+        "--retry-after-429-seconds", type=int, default=900,
+        metavar="N",
+        help="Suggested cooldown seconds printed when Wikimedia returns 429 (default: 900)",
     )
     args = parser.parse_args()
 
@@ -478,6 +609,12 @@ if __name__ == "__main__":
         parser.error("--per-day must be greater than 0")
     if args.daily_post_cap <= 0:
         parser.error("--daily-post-cap must be greater than 0")
+    if args.download_delay_seconds < 0:
+        parser.error("--download-delay-seconds must be >= 0")
+    if args.max_downloads_per_run <= 0:
+        parser.error("--max-downloads-per-run must be greater than 0")
+    if args.retry_after_429_seconds <= 0:
+        parser.error("--retry-after-429-seconds must be greater than 0")
 
     try:
         main(
@@ -487,6 +624,9 @@ if __name__ == "__main__":
             per_day=args.per_day,
             daily_post_cap=args.daily_post_cap,
             write=args.write,
+            download_delay=args.download_delay_seconds,
+            max_downloads=args.max_downloads_per_run,
+            retry_after_429=args.retry_after_429_seconds,
         )
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"[schedule] Error: {exc}", file=sys.stderr)
