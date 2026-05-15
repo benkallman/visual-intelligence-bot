@@ -58,7 +58,16 @@ _PRIORITY_KEYWORDS = [
     "netsuke", "noh", "buddhist", "edo", "meiji",
     "hokusai", "hiroshige", "kuniyoshi", "utamaro", "toshikata",
     "mokuhanga", "print",
+    "yokai", "oni", "tengu", "ghost", "demon", "supernatural",
+    "spirit", "folklore", "yoshitoshi", "kyosai", "kawanabe",
 ]
+
+_SUPERNATURAL_KEYWORDS = frozenset({
+    "yokai", "youkai", "oni", "tengu", "kappa", "yurei", "obake", "bakemono",
+    "ghost", "demon", "spirit", "supernatural", "monster", "folklore", "mythology",
+    "hyakki", "yagyo", "shoki", "exorcism", "magic", "mystic", "kitsune",
+    "tanuki", "dragon", "kirin", "raijin", "fujin", "fudo",
+})
 
 
 # ---------------------------------------------------------------------------
@@ -107,10 +116,14 @@ def _detect_period(title: str, year: int | None) -> str:
     lower = title.lower()
     if "hokusai" in lower or "hiroshige" in lower or "utamaro" in lower or "kuniyoshi" in lower or "sharaku" in lower:
         return "Edo"
+    if "kyosai" in lower or "kawanabe" in lower:
+        return "Meiji"
     if "meiji" in lower or (year and 1868 <= year <= 1912):
         return "Meiji"
     if "taisho" in lower or (year and 1912 < year <= 1926):
         return "Taisho"
+    if "yoshitoshi" in lower or "kunichika" in lower or "kunisada" in lower:
+        return "Edo"
     if "edo" in lower or (year and year < 1868):
         return "Edo"
     return "Japanese"
@@ -141,11 +154,15 @@ def _opening_line(title: str, year: int | None) -> str:
         return f"Buddhist carved wood{year_str}."
 
     is_print = any(kw in lower for kw in ["woodblock", "woodcut", "wood-block", "ukiyo-e", "print"])
+    if any(kw in lower for kw in _SUPERNATURAL_KEYWORDS) and is_print:
+        period = _detect_period(title, year)
+        return f"{period} woodblock print{year_str}."
+
     if is_print:
         period = _detect_period(title, year)
         return f"{period} woodblock print{year_str}."
 
-    return f"Japanese historical work{year_str}."
+    return f"Historical work{year_str}."
 
 
 def _subject_note(title: str) -> str:
@@ -182,7 +199,43 @@ def _subject_note(title: str) -> str:
     if "crane" in lower and ("inro" in lower or "cloud" in lower or "decoration" in lower):
         return "Decorative object -- crane imagery connecting longevity symbolism and surface ornament across Japanese craft."
 
+    # Supernatural / folklore subject notes
+    if "hyakki" in lower or "yagyo" in lower or "night parade" in lower:
+        return "Folklore motif -- the Night Parade of One Hundred Demons, a procession of supernatural beings from Japanese folklore."
+    if "shoki" in lower:
+        return "Depicts Shoki the Demon Queller -- a protective deity shown vanquishing oni in Japanese folk belief and print tradition."
+    if "benkei" in lower:
+        return "Legendary martial scene -- Benkei the warrior monk, a figure of superhuman strength in Japanese folklore and kabuki theatre."
+    if "tengu" in lower:
+        return "Folklore motif -- tengu, mountain spirits with avian features, appear across Japanese mythology, kabuki, and woodblock print."
+    if "kappa" in lower:
+        return "Yokai imagery -- kappa, water-dwelling creatures from Japanese folklore, depicted across popular woodblock print culture."
+    if "oni" in lower:
+        return "Depicts oni, horned demons from Japanese folklore -- recurring figures across woodblock print, kabuki, and seasonal ritual."
+    if "yurei" in lower or "ghost" in lower or "yūrei" in lower:
+        return "Folklore motif -- yūrei, spirits of the dead in Japanese tradition, depicted with distinctive pale and trailing visual language."
+    if "kitsune" in lower or ("fox" in lower and "spirit" in lower):
+        return "Yokai imagery -- the kitsune fox spirit, a shape-shifting figure of intelligence and mischief in Japanese mythology."
+    if "tanuki" in lower:
+        return "Depicts tanuki, the raccoon dog, a trickster figure with magical transformation abilities in Japanese folklore."
+    if "dragon" in lower and ("japanese" in lower or "woodblock" in lower or "print" in lower):
+        return "Legendary martial scene -- the Japanese dragon, a water deity and symbol of power depicted across woodblock print tradition."
+    if any(kw in lower for kw in ("yokai", "youkai", "obake", "bakemono")):
+        return "Yokai imagery -- supernatural creatures from Japanese folklore rendered in woodblock print form."
+    if "exorcism" in lower or ("demon" in lower and "quell" in lower):
+        return "Depicts an exorcism or demon-quelling scene -- protective ritual power expressed through woodblock composition."
+    if ("warrior monk" in lower or "yamabushi" in lower) and ("woodblock" in lower or "print" in lower):
+        return "Legendary martial scene -- warrior monks embodying the intersection of religious discipline and martial power in Japanese imagery."
+    if "samurai" in lower and any(kw in lower for kw in ("supernatural", "ghost", "demon", "spirit", "magic")):
+        return "Legendary martial scene -- samurai confronting supernatural forces, a recurring dramatic subject in Edo and Meiji woodblock print."
+    if "kabuki" in lower and any(kw in lower for kw in ("demon", "ghost", "supernatural", "oni", "spirit")):
+        return "Kabuki/theatre scene -- supernatural antagonist rendered through the visual conventions of Japanese woodblock print."
+
     # Artist-specific notes (Wikimedia titles often name the artist)
+    if "kyosai" in lower or "kawanabe" in lower:
+        return "Kawanabe Kyōsai print -- Meiji satirist and master of supernatural imagery, bridging Edo tradition and modern irreverence."
+    if "yoshitoshi" in lower:
+        return "Tsukioka Yoshitoshi print -- the last great master of ukiyo-e, known for dramatic scenes of violence, ghosts, and human passion."
     if "hokusai" in lower:
         return "Hokusai composition -- dynamic line and naturalist observation defining the Edo woodblock tradition."
     if "hiroshige" in lower:
@@ -212,7 +265,7 @@ def _subject_note(title: str) -> str:
         p = f"{period} " if period else ""
         return f"{p}Woodblock print -- line, pigment, and paper composing images before mechanical reproduction in Japan."
 
-    return "Medium and period connect to wood, print, and decorative craft traditions in Japanese historical imagery."
+    return "Historical image -- medium and period from source metadata."
 
 
 def _make_caption(item: dict) -> str:
