@@ -75,8 +75,18 @@ _HISTORICAL_KEYWORDS = [
     "meiji", "taisho", "early showa",
     "nara period", "asuka", "kofun", "jomon", "yayoi",
     "ukiyo-e", "ukiyoe", "woodblock", "mokuhanga", "woodcut",
-    "netsuke", "noh mask", "noh", "hokusai", "hiroshige", "kuniyoshi", "utamaro",
+    "netsuke", "noh mask", "noh",
+    # artists
+    "hokusai", "hiroshige", "kuniyoshi", "utamaro",
+    "yoshitoshi", "kunichika", "kunisada", "sharaku",
+    "toshikata", "kunimasa", "toyohara",
+    # subjects / styles
+    "bijin", "musha-e", "yakusha-e", "yakusha", "nishiki-e", "surimono",
+    "kabuki", "yokai", "samurai",
 ]
+
+# Max subcategories to walk when a category has 0 direct file members.
+_MAX_SUBCAT_WALK = 10
 
 # License substrings that indicate open/CC/PD rights.
 _OPEN_LICENSE_PATTERNS = [
@@ -142,13 +152,8 @@ def _search_wikimedia(query: str, limit: int) -> list[str]:
     ]
 
 
-def _expand_category(category_url: str, limit: int) -> list[str]:
-    """Expand a Commons category URL into a list of file-page URLs."""
-    m = re.match(r"https?://commons\.wikimedia\.org/wiki/(Category:[^?#]+)", category_url)
-    if not m:
-        print(f"[source-pack]   invalid category URL: {category_url}")
-        return []
-    category_title = m.group(1).replace("_", " ")
+def _get_category_files(category_title: str, limit: int) -> list[str]:
+    """Return file-page URLs that are direct members of category_title."""
     params = {
         "action": "query",
         "list": "categorymembers",
@@ -161,7 +166,7 @@ def _expand_category(category_url: str, limit: int) -> list[str]:
         resp = httpx.get(_API_ENDPOINT, params=params, headers=_HEADERS, timeout=30)
         resp.raise_for_status()
     except Exception as exc:
-        print(f"[source-pack]   category error: {exc}")
+        print(f"[source-pack]   category API error: {exc}")
         return []
     members = resp.json().get("query", {}).get("categorymembers", [])
     return [
@@ -169,6 +174,77 @@ def _expand_category(category_url: str, limit: int) -> list[str]:
         for mem in members
         if mem.get("title", "").startswith("File:")
     ]
+
+
+def _get_category_subcats(category_title: str, limit: int = 20) -> list[str]:
+    """Return subcategory titles that are direct children of category_title."""
+    params = {
+        "action": "query",
+        "list": "categorymembers",
+        "cmtitle": category_title,
+        "cmtype": "subcat",
+        "cmlimit": str(min(limit, 50)),
+        "format": "json",
+    }
+    try:
+        resp = httpx.get(_API_ENDPOINT, params=params, headers=_HEADERS, timeout=30)
+        resp.raise_for_status()
+    except Exception as exc:
+        return []
+    members = resp.json().get("query", {}).get("categorymembers", [])
+    return [mem["title"] for mem in members if mem.get("title", "").startswith("Category:")]
+
+
+def _expand_category(category_url: str, limit: int) -> list[str]:
+    """Expand a Commons category URL into file-page URLs.
+
+    If the category contains no direct file members, checks whether it has
+    subcategories and walks one level deep (up to _MAX_SUBCAT_WALK subcats).
+    Logs the reason when a category yields zero results so empty categories
+    are not silently swallowed.
+    """
+    m = re.match(r"https?://commons\.wikimedia\.org/wiki/(Category:[^?#]+)", category_url)
+    if not m:
+        print(f"[source-pack]   invalid category URL: {category_url}")
+        return []
+
+    category_title = m.group(1).replace("_", " ")
+
+    files = _get_category_files(category_title, limit)
+    if files:
+        return files
+
+    # Zero direct files — diagnose why and optionally walk subcategories.
+    subcats = _get_category_subcats(category_title, limit=_MAX_SUBCAT_WALK)
+
+    if not subcats:
+        print(
+            f"[source-pack]   category has 0 direct files and 0 subcategories "
+            f"(missing or empty): {category_title}"
+        )
+        return []
+
+    print(
+        f"[source-pack]   category has 0 direct files, {len(subcats)} subcategory(ies) "
+        f"— walking 1 level (limit={limit})"
+    )
+
+    all_files: list[str] = []
+    per_subcat = max(1, limit // len(subcats))
+
+    for subcat_title in subcats:
+        if len(all_files) >= limit:
+            break
+        remaining = limit - len(all_files)
+        sub_files = _get_category_files(subcat_title, min(per_subcat, remaining))
+        if sub_files:
+            print(f"[source-pack]     subcat {subcat_title!r}: {len(sub_files)} file(s)")
+        all_files.extend(sub_files)
+
+    if not all_files:
+        print(f"[source-pack]   subcategories also returned 0 files for: {category_title}")
+
+    return all_files
 
 
 def _fetch_file_metadata(page_url: str) -> dict | None:
