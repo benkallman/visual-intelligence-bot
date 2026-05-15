@@ -361,11 +361,17 @@ def main(
     send: bool,
     auto_build_pack: str | None = None,
     auto_build_top: int = 3,
+    rank: int | None = None,
+    skip_cooldown: bool = False,
 ) -> None:
     """Scan the queue and post (or preview) the next eligible rank.
 
     Skips duplicate and over-limit ranks within one invocation rather than
     stopping at the first problem. Posts at most one item per call.
+
+    When --rank is given, targets that rank directly and skips the daily cap
+    and (if --skip-cooldown) the spacing check. The post is still duplicate-
+    checked and logged normally.
 
     Exits 0 in all expected non-error states (wait, cap reached, nothing left).
     Exits 1 only on missing credentials or an API error.
@@ -389,12 +395,14 @@ def main(
     rank_summary = sorted(done_ranks_today) if done_ranks_today else "none"
     print(f"[queue] posted_today={len(posted_today)}/{max_posts}  done_ranks={rank_summary}")
 
-    if len(posted_today) >= max_posts:
-        print(f"[queue] max posts ({max_posts}) already reached for {date_str}. Nothing to do.")
-        return
+    # --rank bypasses the daily cap and optionally the cooldown.
+    if rank is None:
+        if len(posted_today) >= max_posts:
+            print(f"[queue] max posts ({max_posts}) already reached for {date_str}. Nothing to do.")
+            return
 
     # Enforce minimum spacing against the most recent actually-posted entry.
-    if min_minutes > 0:
+    if not skip_cooldown and min_minutes > 0:
         all_timestamps = [
             e["posted_at"] for e in log
             if e.get("posted_at") and e.get("status", "posted") in _POSTED_STATUSES
@@ -434,10 +442,18 @@ def main(
             print(f"[queue] or pass --auto-build-pack <pack_id> to build automatically")
         return
 
-    eligible = [(rank, folder) for rank, folder in rank_folders if rank not in done_ranks_today]
-    if not eligible:
-        print(f"[queue] all available ranks already posted/skipped for {date_str}.")
-        return
+    if rank is not None:
+        # Targeted post: select only the requested rank, ignoring done_ranks_today.
+        eligible = [(r, f) for r, f in rank_folders if r == rank]
+        if not eligible:
+            print(f"[queue] rank={rank} not found under exports/social/{date_str}/")
+            return
+        print(f"[queue] targeted rank={rank} (--rank overrides cap and done-ranks filter)")
+    else:
+        eligible = [(r, f) for r, f in rank_folders if r not in done_ranks_today]
+        if not eligible:
+            print(f"[queue] all available ranks already posted/skipped for {date_str}.")
+            return
 
     # Build duplicate-detection index once from the full log.
     dup_signals = _build_dup_signals(log)
@@ -580,6 +596,19 @@ if __name__ == "__main__":
         metavar="N",
         help="Number of items to build when auto-building (default: 3)",
     )
+    parser.add_argument(
+        "--rank", type=int, default=None,
+        metavar="N",
+        help=(
+            "Target a specific rank directly, bypassing the daily cap and "
+            "done-ranks filter. Duplicate detection and logging still apply. "
+            "Combine with --skip-cooldown to also bypass spacing."
+        ),
+    )
+    parser.add_argument(
+        "--skip-cooldown", action="store_true",
+        help="Skip the min-minutes-between-posts spacing check.",
+    )
     args = parser.parse_args()
     try:
         main(
@@ -589,6 +618,8 @@ if __name__ == "__main__":
             send=args.send,
             auto_build_pack=args.auto_build_pack,
             auto_build_top=args.auto_build_top,
+            rank=args.rank,
+            skip_cooldown=args.skip_cooldown,
         )
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"[queue] Error: {exc}", file=sys.stderr)
