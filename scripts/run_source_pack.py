@@ -86,6 +86,14 @@ _HISTORICAL_KEYWORDS = [
     # subjects / styles
     "bijin", "musha-e", "yakusha-e", "yakusha", "nishiki-e", "surimono",
     "kabuki", "yokai", "samurai",
+    # --- Japanese supernatural / folklore (for japanese_supernatural_martial_historical pack) ---
+    "youkai", "yōkai", "oni", "tengu", "kappa", "yurei", "yūrei",
+    "obake", "bakemono", "hyakki", "yagyo", "yagyō",
+    "ghost", "demon", "spirit", "supernatural", "monster",
+    "folklore", "mythology",
+    "shoki", "benkei", "warrior monk",
+    "exorcism", "magic", "magical", "mystic", "martial",
+    "guardian", "kyosai", "kawanabe",
     # --- War and propaganda (for war_propaganda_historical pack) ---
     "propaganda", "recruitment", "rationing", "lithograph",
     "world war", "world_war", "wwii", "wwi", "great war",
