@@ -66,10 +66,13 @@ _HEADERS = {
     "User-Agent": "visual-intelligence-bot/0.1 (+https://github.com/benkallman/visual-intelligence-bot)"
 }
 
-# Historical period keywords and media type keywords that imply pre-1956 Japanese work.
-# The query label is included in the keyword check, so items found via a "ukiyo-e"
-# query will pass even when their individual metadata lacks an explicit date.
+# Historical period keywords and media type keywords used to admit undated items.
+# When an item has no parseable year, the title + artist + date_raw + query label
+# are checked against this list. Items that match any keyword pass the date filter.
+# The query label is included, so items found via a targeted query (e.g. "ukiyo-e
+# woodblock print" or "WWII propaganda poster") pass even without explicit date metadata.
 _HISTORICAL_KEYWORDS = [
+    # --- Japanese historical periods and media ---
     "heian", "kamakura", "muromachi", "momoyama",
     "edo period", "edo-period",
     "meiji", "taisho", "early showa",
@@ -83,6 +86,16 @@ _HISTORICAL_KEYWORDS = [
     # subjects / styles
     "bijin", "musha-e", "yakusha-e", "yakusha", "nishiki-e", "surimono",
     "kabuki", "yokai", "samurai",
+    # --- War and propaganda (for war_propaganda_historical pack) ---
+    "propaganda", "recruitment", "rationing", "lithograph",
+    "world war", "world_war", "wwii", "wwi", "great war",
+    "war bond", "war_bond", "liberty loan", "liberty_loan",
+    "victory loan", "victory_loan", "victory bond", "victory_bond",
+    "civil defense", "civil_defense", "home front", "home_front",
+    "red cross", "war poster", "war_poster",
+    "civil war", "civil_war", "crimean", "boer war", "boer_war",
+    "russo-japanese", "sino-japanese", "napoleonic",
+    "spanish civil war", "spanish_civil_war",
 ]
 
 # Max subcategories to walk when a category has 0 direct file members.
