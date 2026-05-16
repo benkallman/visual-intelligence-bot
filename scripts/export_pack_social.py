@@ -167,11 +167,32 @@ def _opening_line(title: str, year: int | None) -> str:
     if "buddhist" in lower:
         return f"Buddhist carved wood{year_str}."
 
-    # Taoist ritual
-    _TAOIST_KWS = ("talisman", "taoist", "taoism", "daoist", "daoism", "thunder rite")
+    # Lingzhi / sacred fungus — checked before generic Taoist path
+    _LINGZHI_KWS = ("lingzhi", "reishi", "ganoderma", "sacred mushroom", "sacred fungus",
+                    "fungus of immortality", "mushroom of immortality", "celestial fungi")
+    if any(kw in lower for kw in _LINGZHI_KWS):
+        return f"Lingzhi or sacred fungus motif from source metadata{year_str}."
+
+    # Chinese materia medica / botanical illustration
+    if any(kw in lower for kw in ("materia medica", "bencao", "bencao gangmu")):
+        return f"Materia medica illustration{year_str}."
+
+    # Taoist immortality — immortals, alchemy, elixir, hermits
+    _IMMORTALITY_KWS = ("immortal", "immortality", "neidan", "waidan", "inner alchemy",
+                        "elixir", "shennong", "lu dongbin", "eight immortals", "ba xian",
+                        "daoist hermit", "mountain hermit", "mountain recluse")
+    if any(kw in lower for kw in _IMMORTALITY_KWS):
+        return f"Taoist immortality image{year_str}."
+    if any(kw in lower for kw in ("longevity", "shou")) and any(kw in lower for kw in ("fungus", "mushroom", "lingzhi", "crane", "deer", "pine")):
+        return f"Taoist immortality image{year_str}."
+
+    # Taoist ritual (talismans, diagrams, alchemy, thunder rites)
+    _TAOIST_KWS = ("talisman", "taoist", "taoism", "daoist", "daoism",
+                   "thunder rite", "alchemy", "alchemical")
     if any(kw in lower for kw in _TAOIST_KWS):
-        if any(kw in lower for kw in ("talisman", "diagram", "charm", "rite", "ritual", "exorcis", "fu")):
-            return f"Taoist ritual diagram{year_str}."
+        if any(kw in lower for kw in ("talisman", "diagram", "charm", "rite", "ritual",
+                                      "exorcis", "fu", "alchemy", "alchemical")):
+            return f"Taoist ritual image{year_str}."
         return f"Historical ritual image{year_str}."
 
     # Shinto / onmyodo
@@ -259,6 +280,29 @@ def _subject_note(title: str) -> str:
         return "Esoteric Buddhist image -- ritual diagram or deity from the Shingon or Vajrayana tradition."
     if any(kw in lower for kw in ("shichifukujin", "seven lucky gods", "seven lucky")):
         return "Devotional subject -- the Seven Lucky Gods, popular across Japanese print culture, temple imagery, and New Year festival tradition."
+
+    # Taoist / Daoist immortality, mushroom, alchemy, and materia medica subject notes
+    if any(kw in lower for kw in ("lingzhi", "reishi", "ganoderma", "sacred fungus",
+                                   "fungus of immortality", "celestial fungi")):
+        return "Lingzhi or sacred fungus motif from source metadata -- a symbol of longevity, immortality, and divine favour across Taoist and decorative Chinese art traditions."
+    if any(kw in lower for kw in ("bencao gangmu", "bencao", "materia medica")):
+        return "Materia medica illustration -- botanical and medicinal subject from the Chinese herbal tradition, documented through text and image."
+    if "shennong" in lower:
+        return "Depicts Shennong, the Divine Farmer -- mythological emperor and patron of agriculture and herbal medicine in Chinese tradition."
+    if "lu dongbin" in lower or "lu tung pin" in lower:
+        return "Depicts Lu Dongbin, the most prominent of the Eight Immortals -- Taoist sage, swordsman, and patron of scholars in Chinese popular religion."
+    if any(kw in lower for kw in ("eight immortals", "ba xian", "baxian")):
+        return "Historical ritual image -- the Eight Immortals, recurring figures of Taoist mythology depicted across Chinese print and decorative arts."
+    if any(kw in lower for kw in ("neidan", "inner alchemy", "waidan")):
+        return "Taoist alchemy diagram -- inner or outer alchemy practice rendered as a cosmological chart, text, or ritual diagram."
+    if any(kw in lower for kw in ("alchemy", "alchemical", "elixir")) and any(kw in lower for kw in ("taoist", "daoist", "chinese")):
+        return "Taoist ritual image -- alchemical or elixir-seeking practice depicted through Chinese religious art or diagram."
+    if any(kw in lower for kw in ("hermit", "recluse")) and any(kw in lower for kw in ("mountain", "taoist", "daoist", "chinese")):
+        return "Taoist immortality image -- the mountain recluse or hermit sage, a recurring figure in Taoist poetic and visual culture."
+    if "ruyi" in lower and any(kw in lower for kw in ("lingzhi", "scepter", "sceptre", "symbol")):
+        return "Historical ritual image -- the ruyi scepter, a symbol of good fortune and authority whose head is modelled on the lingzhi mushroom."
+    if any(kw in lower for kw in ("longevity", "shou")) and any(kw in lower for kw in ("fungus", "mushroom", "lingzhi", "deer", "crane", "pine")):
+        return "Taoist immortality image -- longevity symbol grouping the fungus of immortality with crane, pine, and deer as emblems of long life."
 
     # Supernatural / folklore subject notes
     if "hyakki" in lower or "yagyo" in lower or "night parade" in lower:

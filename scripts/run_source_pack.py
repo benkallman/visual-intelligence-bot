@@ -129,6 +129,20 @@ _HISTORICAL_KEYWORDS = [
     "shingon", "vajrayana",
     "himalayan",
     "thunder rite", "thunder magic",
+    # --- Taoist/Daoist alchemy, mushroom, immortality, materia medica ---
+    "lingzhi", "reishi", "ganoderma",
+    "mushroom", "fungus", "fungi",
+    "immortality", "immortal",
+    "alchemy", "alchemical", "elixir",
+    "materia medica", "bencao",
+    "herbal", "herbalism",
+    "shennong",
+    "lu dongbin",
+    "inner alchemy", "neidan", "waidan",
+    "hermit",
+    "botanical",
+    "ruyi",
+    "longevity",
 ]
 
 # Max subcategories to walk when a category has 0 direct file members.
