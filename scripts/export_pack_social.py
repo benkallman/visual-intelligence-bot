@@ -150,11 +150,31 @@ def _opening_line(title: str, year: int | None) -> str:
     if "shishi" in lower or ("guardian" in lower and "lion" in lower):
         return f"Buddhist guardian sculpture{year_str}."
 
-    # Esoteric Buddhist / Vajrayana — more specific than generic "buddhist"
+    # Tibetan / Vajrayana — most specific checks first
     if "thangka" in lower or "tangka" in lower:
-        return f"Esoteric Buddhist image{year_str}."
+        return f"Tibetan thangka{year_str}."
+
+    # Tibetan mandala compound before generic mandala
+    if "tibetan" in lower and "mandala" in lower:
+        return f"Tibetan mandala{year_str}."
     if "mandala" in lower:
         return f"Buddhist mandala{year_str}."
+
+    # Named Tibetan deities and masters — before generic vajrayana
+    _TIBETAN_DEITY_KWS = (
+        "mahakala", "palden lhamo", "yamantaka", "vajrabhairava", "vajrakilaya",
+        "green tara", "white tara", "tara", "avalokiteshvara", "chenrezig",
+        "padmasambhava", "guru rinpoche", "milarepa", "tsongkhapa", "dharmapala",
+    )
+    if any(kw in lower for kw in _TIBETAN_DEITY_KWS):
+        return f"Vajrayana Buddhist image{year_str}."
+
+    # Tibetan ritual objects — checked before generic vajrayana so "kapala + vajrayana" → ritual object
+    _TIBETAN_RITUAL_KWS = ("phurba", "kila", "kapala", "skull cup", "prayer wheel",
+                           "ghanta", "ritual bell", "ritual dagger", "dorje")
+    if any(kw in lower for kw in _TIBETAN_RITUAL_KWS):
+        return f"Tibetan ritual object{year_str}."
+
     if any(kw in lower for kw in ("vajrayana", "tantric", "tantra", "shingon")):
         return f"Esoteric Buddhist image{year_str}."
     if "wrathful" in lower and any(kw in lower for kw in ("deity", "buddha", "bodhisattva", "guardian", "protector", "tibetan")):
@@ -163,6 +183,10 @@ def _opening_line(title: str, year: int | None) -> str:
     # New year / door god prints are woodblock prints, not carved objects
     if any(kw in lower for kw in ("nianhua", "door god", "menshen", "new year print")):
         return f"Historical woodblock print{year_str}."
+
+    # Himalayan Buddhist fallback before generic Buddhist
+    if any(kw in lower for kw in ("himalayan", "tibetan", "lama")) and "buddhist" in lower:
+        return f"Himalayan Buddhist image{year_str}."
 
     if "buddhist" in lower:
         return f"Buddhist carved wood{year_str}."
@@ -214,6 +238,9 @@ def _opening_line(title: str, year: int | None) -> str:
         period = _detect_period(title, year)
         return f"{period} woodblock print{year_str}."
 
+    if any(kw in lower for kw in ("tibetan", "himalayan", "bardo", "lama", "monastery")):
+        return f"Tibetan mystical image from source metadata{year_str}."
+
     return f"Historical work{year_str}."
 
 
@@ -256,6 +283,19 @@ def _subject_note(title: str) -> str:
         return "Tibetan Buddhist painted scroll -- deity, guardian, or cosmological subject in the thangka tradition."
     if "mandala" in lower:
         return "Ritual cosmogram -- spatial map of a deity's realm used in Vajrayana Buddhist practice and ceremony."
+
+    # Tibetan ritual objects checked before generic "vajrayana" so compound titles route correctly
+    if "phurba" in lower or "kila" in lower or "ritual dagger" in lower:
+        return "Tibetan ritual object -- the phurba (ritual dagger) is used in Vajrayana ceremony to pin down negative forces and stabilise meditation practice."
+    if "kapala" in lower or "skull cup" in lower:
+        return "Tibetan ritual object -- the kapala (skull cup) serves as a ritual vessel in Vajrayana ceremony, symbolising impermanence and offering practice."
+    if "prayer wheel" in lower:
+        return "Tibetan ritual object -- the prayer wheel contains mantras activated by rotation, a central devotional practice in Tibetan Buddhism."
+    if "dorje" in lower or ("vajra" in lower and any(kw in lower for kw in ("ritual", "tibetan", "himalayan", "implement", "object"))):
+        return "Tibetan ritual object -- the dorje (vajra) represents indestructible clarity; paired with the ghanta bell it forms the central ritual implement of Vajrayana ceremony."
+    if "ghanta" in lower or "ritual bell" in lower:
+        return "Tibetan ritual object -- the ghanta (ritual bell) paired with the vajra represents the union of wisdom and method in Vajrayana practice."
+
     if any(kw in lower for kw in ("vajrayana", "tantric", "tantra")):
         return "Esoteric Buddhist image -- deity, symbol, or ritual diagram from the Vajrayana tradition."
     if any(kw in lower for kw in ("talisman", "fu talisman")):
@@ -280,6 +320,40 @@ def _subject_note(title: str) -> str:
         return "Esoteric Buddhist image -- ritual diagram or deity from the Shingon or Vajrayana tradition."
     if any(kw in lower for kw in ("shichifukujin", "seven lucky gods", "seven lucky")):
         return "Devotional subject -- the Seven Lucky Gods, popular across Japanese print culture, temple imagery, and New Year festival tradition."
+
+    # Tibetan deity and tradition subject notes
+    if "mahakala" in lower:
+        return "Depicts Mahakala, a wrathful dharma protector -- one of the principal protector deities in Tibetan Buddhist practice, appearing across thangka and monastery imagery."
+    if "palden lhamo" in lower or "shri devi" in lower:
+        return "Depicts Palden Lhamo, a wrathful female protector deity -- guardian of Lhasa and principal female dharmapala in Tibetan Buddhism."
+    if "yamantaka" in lower or "vajrabhairava" in lower:
+        return "Depicts Yamantaka (Vajrabhairava), a wrathful Tantric deity of the Gelug school -- an emanation of Manjushri in terrifying form."
+    if "vajrakilaya" in lower:
+        return "Depicts Vajrakilaya, a wrathful Vajrayana deity associated with the ritual phurba dagger -- central to Nyingma and other Tibetan Buddhist traditions."
+    if "green tara" in lower:
+        return "Depicts Green Tara, a Bodhisattva of compassion and active protection -- one of the most venerated figures in Tibetan Buddhist devotional practice."
+    if "white tara" in lower:
+        return "Depicts White Tara, a Bodhisattva associated with longevity and healing -- depicted with seven eyes representing her all-encompassing compassionate awareness."
+    if "tara" in lower and any(kw in lower for kw in ("tibetan", "buddhist", "thangka", "himalayan", "vajrayana")):
+        return "Depicts Tara, a female Bodhisattva of compassion -- one of the most widely venerated figures in Tibetan and Himalayan Buddhist tradition."
+    if "avalokiteshvara" in lower or "chenrezig" in lower or "avalokitesvara" in lower:
+        return "Depicts Avalokiteshvara (Chenrezig), the Bodhisattva of compassion -- a central figure in Tibetan Buddhism and the patron deity of Tibet."
+    if "padmasambhava" in lower or "guru rinpoche" in lower:
+        return "Depicts Padmasambhava (Guru Rinpoche), the 8th-century master who brought Vajrayana Buddhism to Tibet -- depicted across thangka and monastery art."
+    if "milarepa" in lower:
+        return "Depicts Milarepa, the 11th-century Tibetan saint and poet -- a central figure in the Kagyu tradition, depicted in mountain meditation with characteristic green tint."
+    if "tsongkhapa" in lower:
+        return "Depicts Tsongkhapa, the 14th-15th century scholar-reformer who founded the Gelug school of Tibetan Buddhism -- depicted in devotional and philosophical imagery."
+
+    # Bardo, astrological, and cosmological / monastery imagery
+    if "bardo" in lower:
+        return "Tibetan mystical image from source metadata -- bardo imagery depicts states of consciousness between death and rebirth, drawn from the Bardo Thodol (Tibetan Book of the Dead)."
+    if "astrological" in lower and any(kw in lower for kw in ("tibetan", "himalayan", "buddhist")):
+        return "Tibetan astrological diagram -- combining Indian, Chinese, and indigenous Tibetan astronomical systems in a cosmological chart."
+    if "cosmological" in lower and any(kw in lower for kw in ("tibetan", "himalayan", "buddhist")):
+        return "Himalayan Buddhist cosmological image -- spatial map of the universe rendered through Tibetan and Vajrayana iconographic conventions."
+    if any(kw in lower for kw in ("monastery", "mural")) and any(kw in lower for kw in ("tibetan", "himalayan", "bhutan", "nepal")):
+        return "Himalayan Buddhist image -- monastery mural or devotional painting from the Tibetan, Bhutanese, or Himalayan Buddhist tradition."
 
     # Taoist / Daoist immortality, mushroom, alchemy, and materia medica subject notes
     if any(kw in lower for kw in ("lingzhi", "reishi", "ganoderma", "sacred fungus",
@@ -363,6 +437,8 @@ def _subject_note(title: str) -> str:
         return "Carved face with controlled expression -- designed to shift under stage light, marking theatrical identity."
     if "netsuke" in lower:
         return "Miniature carved forms showing how function, ornament, and storytelling compress into handheld scale."
+    if any(kw in lower for kw in ("tibetan", "himalayan")) and "buddhist" in lower:
+        return "Himalayan Buddhist image -- devotional or iconographic subject from the Tibetan and Himalayan Buddhist tradition."
     if "buddhist" in lower or "shishi" in lower:
         return "Ritual presence shaped through carved wood -- holding function across temple and monastery contexts."
     if any(kw in lower for kw in ["woodblock", "woodcut", "ukiyo-e", "print"]):
