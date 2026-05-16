@@ -150,8 +150,39 @@ def _opening_line(title: str, year: int | None) -> str:
     if "shishi" in lower or ("guardian" in lower and "lion" in lower):
         return f"Buddhist guardian sculpture{year_str}."
 
+    # Esoteric Buddhist / Vajrayana — more specific than generic "buddhist"
+    if "thangka" in lower or "tangka" in lower:
+        return f"Esoteric Buddhist image{year_str}."
+    if "mandala" in lower:
+        return f"Buddhist mandala{year_str}."
+    if any(kw in lower for kw in ("vajrayana", "tantric", "tantra", "shingon")):
+        return f"Esoteric Buddhist image{year_str}."
+    if "wrathful" in lower and any(kw in lower for kw in ("deity", "buddha", "bodhisattva", "guardian", "protector", "tibetan")):
+        return f"Esoteric Buddhist image{year_str}."
+
+    # New year / door god prints are woodblock prints, not carved objects
+    if any(kw in lower for kw in ("nianhua", "door god", "menshen", "new year print")):
+        return f"Historical woodblock print{year_str}."
+
     if "buddhist" in lower:
         return f"Buddhist carved wood{year_str}."
+
+    # Taoist ritual
+    _TAOIST_KWS = ("talisman", "taoist", "taoism", "daoist", "daoism", "thunder rite")
+    if any(kw in lower for kw in _TAOIST_KWS):
+        if any(kw in lower for kw in ("talisman", "diagram", "charm", "rite", "ritual", "exorcis", "fu")):
+            return f"Taoist ritual diagram{year_str}."
+        return f"Historical ritual image{year_str}."
+
+    # Shinto / onmyodo
+    if "shinto" in lower or "onmyodo" in lower or "onmyoji" in lower:
+        return f"Shinto ritual image{year_str}."
+
+    # Fraternal / society — only when present in source title
+    _SOCIETY_KWS = ("tiandihui", "tian di hui", "heaven and earth society",
+                    "white lotus", "boxer rebellion", "fraternal", "lodge")
+    if any(kw in lower for kw in _SOCIETY_KWS):
+        return f"Historical fraternal image{year_str}."
 
     is_print = any(kw in lower for kw in ["woodblock", "woodcut", "wood-block", "ukiyo-e", "print"])
     if any(kw in lower for kw in _SUPERNATURAL_KEYWORDS) and is_print:
@@ -198,6 +229,36 @@ def _subject_note(title: str) -> str:
         return "Domestic interior subject -- household arrangement and everyday ritual in Meiji print design."
     if "crane" in lower and ("inro" in lower or "cloud" in lower or "decoration" in lower):
         return "Decorative object -- crane imagery connecting longevity symbolism and surface ornament across Japanese craft."
+
+    # Asian esoteric, ritual, and society-adjacent subject notes
+    if "thangka" in lower or "tangka" in lower:
+        return "Tibetan Buddhist painted scroll -- deity, guardian, or cosmological subject in the thangka tradition."
+    if "mandala" in lower:
+        return "Ritual cosmogram -- spatial map of a deity's realm used in Vajrayana Buddhist practice and ceremony."
+    if any(kw in lower for kw in ("vajrayana", "tantric", "tantra")):
+        return "Esoteric Buddhist image -- deity, symbol, or ritual diagram from the Vajrayana tradition."
+    if any(kw in lower for kw in ("talisman", "fu talisman")):
+        return "Taoist ritual diagram -- protective or exorcistic writing combining calligraphic mark and symbolic form."
+    if "wrathful" in lower and any(kw in lower for kw in ("deity", "buddha", "bodhisattva", "guardian", "protector")):
+        return "Wrathful deity -- dharma protector figure rendered through the iconographic conventions of Vajrayana Buddhism."
+    if "zhong kui" in lower or "zhongkui" in lower:
+        return "Depicts Zhong Kui the demon queller -- a protective figure from Chinese folklore appearing in ritual and festival art."
+    if "guan yu" in lower or "guanyu" in lower or "guan di" in lower:
+        return "Historical ritual image -- Guan Yu as deity of war and righteousness, venerated across Chinese folk religion."
+    if any(kw in lower for kw in ("eight immortals", "ba xian", "baxian")):
+        return "Historical ritual image -- the Eight Immortals, recurring figures of Taoist mythology depicted across Chinese print culture."
+    if any(kw in lower for kw in ("door god", "menshen", "nianhua", "new year print")):
+        return "Chinese new year or door-god woodblock print -- ritual imagery produced for festival and household protection."
+    if "boxer" in lower and ("rebellion" in lower or "uprising" in lower):
+        return "Historical print documenting the Boxer Rebellion -- imagery produced during or after the 1898–1901 uprising in China."
+    if any(kw in lower for kw in ("tiandihui", "heaven and earth society", "white lotus", "tian di hui")):
+        return "Fraternal or society-associated image from source metadata."
+    if "minhwa" in lower or ("korean" in lower and "folk" in lower):
+        return "Korean folk painting -- minhwa tradition combining decorative and ritual function across household and festival imagery."
+    if "shingon" in lower or ("esoteric" in lower and "buddhist" in lower):
+        return "Esoteric Buddhist image -- ritual diagram or deity from the Shingon or Vajrayana tradition."
+    if any(kw in lower for kw in ("shichifukujin", "seven lucky gods", "seven lucky")):
+        return "Devotional subject -- the Seven Lucky Gods, popular across Japanese print culture, temple imagery, and New Year festival tradition."
 
     # Supernatural / folklore subject notes
     if "hyakki" in lower or "yagyo" in lower or "night parade" in lower:
