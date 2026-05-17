@@ -608,6 +608,12 @@ def main(
         log.append(entry)
         _save_log(log)
 
+        try:
+            from src.integrations.google_drive_log import log_post as _drive_log_post
+            _drive_log_post(entry, folder, bundle["image_path"], bundle["text"])
+        except Exception as _drive_exc:
+            print(f"[drive-log] unexpected error: {_drive_exc}")
+
         print(f"[queue] posted tweet_id={tweet_id}")
         print(f"[queue] log updated: {LOG_PATH}")
         return  # One post per invocation.
