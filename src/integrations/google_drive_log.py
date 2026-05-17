@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import pathlib
-import datetime
 from typing import TYPE_CHECKING
 
 try:
@@ -74,23 +73,6 @@ def _upload_image(drive_service, image_path: str, folder_id: str, filename: str)
     return uploaded.get("webViewLink")
 
 
-def _append_to_doc(docs_service, doc_id: str, text: str) -> None:
-    """Appends text to the end of a Google Doc."""
-    docs_service.documents().batchUpdate(
-        documentId=doc_id,
-        body={
-            "requests": [
-                {
-                    "insertText": {
-                        "location": {"index": 1, "segmentId": ""},
-                        "text": text,
-                    }
-                }
-            ]
-        },
-    ).execute()
-
-
 def _end_of_doc_index(docs_service, doc_id: str) -> int:
     """Returns the index just before the final newline in the document body."""
     doc = docs_service.documents().get(documentId=doc_id).execute()
@@ -121,30 +103,51 @@ def _append_to_doc_end(docs_service, doc_id: str, text: str) -> None:
     ).execute()
 
 
+def _read_folder_metadata(folder: pathlib.Path) -> dict:
+    meta_path = folder / "metadata.json"
+    if not meta_path.is_file():
+        return {}
+    try:
+        import json
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
 def _build_log_block(
     entry: dict,
+    meta: dict,
     post_text: str,
     image_link: str | None,
 ) -> str:
     """Formats the log entry as a text block to append to the Google Doc."""
-    date_str = entry.get("date", "")
-    rank = entry.get("rank", "")
-    pack_id = entry.get("pack_id", "")
     tweet_id = entry.get("tweet_id", "")
     posted_at = entry.get("posted_at", "")
+    pack_id = entry.get("pack_id") or meta.get("pack_id", "")
     folder = entry.get("folder", "")
+
+    title = meta.get("title", "")
+    artist = meta.get("artist", "") or meta.get("maker", "")
+    year = meta.get("year", "") or meta.get("date", "")
+    source_url = meta.get("source_url", "") or meta.get("page_url", "")
 
     tweet_url = f"https://x.com/i/web/status/{tweet_id}" if tweet_id else "(no tweet id)"
     image_line = image_link if image_link else "(upload failed)"
 
     lines = [
-        f"\n---\n",
-        f"Date: {date_str}  |  Rank: {rank}  |  Pack: {pack_id}\n",
+        "\n---\n",
         f"Posted at: {posted_at}\n",
-        f"Tweet: {tweet_url}\n",
-        f"Image: {image_line}\n",
-        f"Folder: {folder}\n",
-        f"Text:\n{post_text}\n",
+        f"Pack: {pack_id}\n",
+        f"Title: {title}\n",
+        f"Artist: {artist}\n",
+        f"Year: {year}\n",
+        f"Caption: {post_text}\n",
+        f"X post: {tweet_url}\n",
+        f"Original source: {source_url}\n",
+        f"Drive image: {image_line}\n",
+        f"Queue folder: {folder}\n",
+        f"Tweet ID: {tweet_id}\n",
+        "Notes: posted successfully\n",
     ]
     return "".join(lines)
 
@@ -180,11 +183,13 @@ def log_post(
         print(f"[drive-log] failed to build Google services: {exc}")
         return
 
+    meta = _read_folder_metadata(folder)
+
     image_link: str | None = None
     try:
         date_str = entry.get("date", "")
         rank = entry.get("rank", 0)
-        pack_id = entry.get("pack_id")
+        pack_id = entry.get("pack_id") or meta.get("pack_id")
         filename = _make_filename(date_str, rank, pack_id)
         image_link = _upload_image(drive_service, image_path, folder_id, filename)
         print(f"[drive-log] image uploaded: {image_link}")
@@ -192,7 +197,7 @@ def log_post(
         print(f"[drive-log] image upload failed: {exc}")
 
     try:
-        block = _build_log_block(entry, post_text, image_link)
+        block = _build_log_block(entry, meta, post_text, image_link)
         _append_to_doc_end(docs_service, doc_id, block)
         print(f"[drive-log] doc updated: https://docs.google.com/document/d/{doc_id}/edit")
     except Exception as exc:
