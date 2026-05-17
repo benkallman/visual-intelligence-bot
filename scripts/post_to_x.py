@@ -232,24 +232,43 @@ def _verify_credentials(credentials: dict[str, str]) -> None:
         print(resp.text)
 
 
-def _prepare_media_for_x(image_path: Path) -> Path:
-    """Return a JPEG-normalized copy if the image exceeds X upload limits.
+def _prepare_media_for_x(image_path: Path) -> dict:
+    """Inspect and, if necessary, normalize the image for X upload.
 
     Checks both file size (_MAX_UPLOAD_BYTES = 14 MB) and pixel dimensions
-    (_MAX_IMAGE_DIMENSION = 4096 px). If within both limits, returns the
-    original path unchanged — no copy is made, no disk write.
+    (_MAX_IMAGE_DIMENSION = 4096 px). Returns a dict with keys:
 
-    When normalization is needed, writes to temp/post_media/ and steps through
-    JPEG quality values (92 → 88 → 84 → 80 → 76 → 72) until the file fits
-    under 14 MB. If quality 72 still exceeds the limit, returns the quality-72
-    version anyway so the upload can attempt to proceed. The original file is
-    never modified.
+        upload_path     Path to use for the actual upload
+        was_normalized  bool — True if a JPEG copy was created
+        original_path   Path — always the input path
+        original_size   int — bytes of original file
+        upload_size     int — bytes of file that will be uploaded
+        original_dims   (w, h) | None
+
+    When normalization is needed the function writes to temp/post_media/ and
+    steps through _QUALITY_LADDER until the output fits under 14 MB. If quality
+    72 still exceeds the limit the smallest version is returned anyway so the
+    upload can attempt to proceed. The original file is never modified.
     """
+    def _not_normalized(dims=None) -> dict:
+        try:
+            sz = image_path.stat().st_size
+        except OSError:
+            sz = 0
+        return {
+            "upload_path": image_path,
+            "was_normalized": False,
+            "original_path": image_path,
+            "original_size": sz,
+            "upload_size": sz,
+            "original_dims": dims,
+        }
+
     try:
         from PIL import Image
     except ImportError:
         print("[post-x] Pillow not available; skipping media normalization")
-        return image_path
+        return _not_normalized()
 
     orig_size = image_path.stat().st_size
 
@@ -258,18 +277,18 @@ def _prepare_media_for_x(image_path: Path) -> Path:
             orig_w, orig_h = img.size
     except Exception as exc:
         print(f"[post-x] could not inspect image ({exc}); using original")
-        return image_path
+        return _not_normalized()
 
     needs_resize = orig_w > _MAX_IMAGE_DIMENSION or orig_h > _MAX_IMAGE_DIMENSION
     if orig_size <= _MAX_UPLOAD_BYTES and not needs_resize:
-        return image_path
+        return _not_normalized(dims=(orig_w, orig_h))
 
     temp_dir = Path(ROOT_DIR) / "temp" / "post_media"
     try:
         temp_dir.mkdir(parents=True, exist_ok=True)
     except Exception as exc:
         print(f"[post-x] could not create temp dir ({exc}); using original")
-        return image_path
+        return _not_normalized(dims=(orig_w, orig_h))
 
     out_path = temp_dir / image_path.name
 
@@ -283,7 +302,7 @@ def _prepare_media_for_x(image_path: Path) -> Path:
                 img.save(out_path, "JPEG", quality=quality)
         except Exception as exc:
             print(f"[post-x] normalization error at quality={quality}: {exc}; using original")
-            return image_path
+            return _not_normalized(dims=(orig_w, orig_h))
 
         out_size = out_path.stat().st_size
         if out_size <= _MAX_UPLOAD_BYTES:
@@ -291,7 +310,14 @@ def _prepare_media_for_x(image_path: Path) -> Path:
                 f"[post-x] prepared media: original={image_path} size={orig_size}"
                 f" upload={out_path} size={out_size} quality={quality}"
             )
-            return out_path
+            return {
+                "upload_path": out_path,
+                "was_normalized": True,
+                "original_path": image_path,
+                "original_size": orig_size,
+                "upload_size": out_size,
+                "original_dims": (orig_w, orig_h),
+            }
 
         print(f"[post-x] quality={quality}: {out_size} bytes still over limit; reducing")
 
@@ -301,17 +327,28 @@ def _prepare_media_for_x(image_path: Path) -> Path:
         f"[post-x] prepared media: original={image_path} size={orig_size}"
         f" upload={out_path} size={out_size} quality=72 (limit not met)"
     )
-    return out_path
+    return {
+        "upload_path": out_path,
+        "was_normalized": True,
+        "original_path": image_path,
+        "original_size": orig_size,
+        "upload_size": out_size,
+        "original_dims": (orig_w, orig_h),
+    }
 
 
-def _upload_media(image_path: Path, credentials: dict[str, str]) -> str:
+def _upload_media(image_path: Path, credentials: dict[str, str]) -> tuple[str, dict]:
     """Upload image to the X v1.1 media endpoint with retry on transient errors.
 
-    Retries on HTTP 429/500/502/503/504 with progressive delays defined by
-    _RETRY_DELAYS_SEC (3 retries = 4 total attempts). Raises RuntimeError on
-    permanent failures or after all retries are exhausted.
+    Calls _prepare_media_for_x first; retries on HTTP 429/500/502/503/504 with
+    progressive delays (_RETRY_DELAYS_SEC, 3 retries = 4 total attempts). Raises
+    RuntimeError on permanent failures or after all retries are exhausted.
+
+    Returns (media_id_string, media_info) where media_info is the dict produced
+    by _prepare_media_for_x (was_normalized, original_path, original_size, etc.).
     """
-    upload_path = _prepare_media_for_x(image_path)
+    media_info = _prepare_media_for_x(image_path)
+    upload_path: Path = media_info["upload_path"]
     mime_type = mimetypes.guess_type(upload_path.name)[0] or "image/jpeg"
     delays = list(_RETRY_DELAYS_SEC)
     total_attempts = len(delays) + 1
@@ -352,7 +389,7 @@ def _upload_media(image_path: Path, credentials: dict[str, str]) -> str:
                 print(resp.text)
                 media_id = None
             if media_id:
-                return media_id
+                return media_id, media_info
             raise RuntimeError(
                 f"X media upload returned HTTP 200 but no media_id_string. "
                 f"image={upload_path}  response={resp.text[:500]}"
@@ -390,12 +427,16 @@ def _upload_media(image_path: Path, credentials: dict[str, str]) -> str:
 
 
 def _send_post(bundle: dict, credentials: dict[str, str]) -> dict:
-    """Upload the image then create the tweet, returning the API response body.
+    """Upload the image then create the tweet, returning the combined response.
 
-    Raises RuntimeError on any failure so callers do not need to handle
-    requests.HTTPError separately.
+    Returns a dict containing all keys from the X API response body plus a
+    "media_info" key with normalization details (was_normalized, original_path,
+    original_size, upload_path, upload_size, original_dims). Callers use
+    media_info to decide whether to log oversized/compressed images.
+
+    Raises RuntimeError on any failure so callers handle one exception type.
     """
-    media_id = _upload_media(bundle["image_path"], credentials)
+    media_id, media_info = _upload_media(bundle["image_path"], credentials)
 
     tweet_response = _create_tweet_v2(bundle["text"], media_id, credentials)
     print(f"[post-x] Response: HTTP {tweet_response.status_code}")
@@ -411,7 +452,7 @@ def _send_post(bundle: dict, credentials: dict[str, str]) -> dict:
             f"X tweet creation failed: HTTP {tweet_response.status_code}  "
             f"{tweet_response.text[:500]}"
         ) from exc
-    return response_body
+    return {**response_body, "media_info": media_info}
 
 
 def main(date_value: str, rank: int, send: bool, verify_auth: bool = False) -> None:

@@ -29,6 +29,7 @@ _SCOPES = [
 _ENV_ENABLED = "IMAGEBOT_DRIVE_LOG_ENABLED"
 _ENV_DOC_ID = "IMAGEBOT_DRIVE_LOG_DOC_ID"
 _ENV_FOLDER_ID = "IMAGEBOT_DRIVE_LOG_FOLDER_ID"
+_ENV_OVERSIZE_DOC_ID = "IMAGEBOT_OVERSIZE_LOG_DOC_ID"
 _ENV_CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 
 
@@ -152,6 +153,62 @@ def _build_log_block(
     return "".join(lines)
 
 
+def _get_image_dims(image_path: str) -> "tuple[int, int] | None":
+    """Return (width, height) using Pillow if available; otherwise None."""
+    try:
+        from PIL import Image
+        with Image.open(image_path) as img:
+            return img.size
+    except Exception:
+        return None
+
+
+def _build_oversize_block(
+    entry: dict,
+    meta: dict,
+    image_path: str,
+    error_text: str,
+    original_dims: "tuple[int, int] | None",
+    normalized_path: "str | None",
+    normalized_size: "int | None",
+    posted_later_url: "str | None",
+) -> str:
+    detected_at = entry.get("failed_at") or entry.get("posted_at") or ""
+    pack_id = entry.get("pack_id") or meta.get("pack_id", "")
+    date_str = entry.get("date", "")
+    rank = entry.get("rank", "")
+    title = meta.get("title", "")
+    artist = meta.get("artist", "") or meta.get("maker", "")
+    year = meta.get("year", "") or meta.get("date", "")
+    source_url = meta.get("source_url", "") or meta.get("page_url", "")
+
+    try:
+        orig_size = pathlib.Path(image_path).stat().st_size
+    except Exception:
+        orig_size = ""
+
+    dims_str = f"{original_dims[0]}x{original_dims[1]}" if original_dims else "(unknown)"
+
+    lines = [
+        "\n---\n",
+        f"Detected at: {detected_at}\n",
+        f"Pack: {pack_id}  |  Date: {date_str}  |  Rank: {rank}\n",
+        f"Title: {title}\n",
+        f"Artist: {artist}\n",
+        f"Year: {year}\n",
+        f"Original source: {source_url}\n",
+        f"Local image path: {image_path}\n",
+        f"Original file size (bytes): {orig_size}\n",
+        f"Original dimensions: {dims_str}\n",
+        f"X upload error: {error_text}\n",
+        f"Normalized path: {normalized_path or '(none)'}\n",
+        f"Normalized size (bytes): {normalized_size if normalized_size is not None else '(none)'}\n",
+        f"Posted later URL: {posted_later_url or '(not posted)'}\n",
+        f"Notes: oversized/compressed image logged\n",
+    ]
+    return "".join(lines)
+
+
 def log_post(
     entry: dict,
     folder: "pathlib.Path",
@@ -202,3 +259,64 @@ def log_post(
         print(f"[drive-log] doc updated: https://docs.google.com/document/d/{doc_id}/edit")
     except Exception as exc:
         print(f"[drive-log] doc append failed: {exc}")
+
+
+def log_oversized_image(
+    entry: dict,
+    folder: "pathlib.Path",
+    image_path: str,
+    error_text: str,
+    normalized_path: "str | None" = None,
+    normalized_size: "int | None" = None,
+    posted_later_url: "str | None" = None,
+    original_dims: "tuple[int, int] | None" = None,
+) -> None:
+    """Append an oversized/compressed image record to IMAGEBOT_OVERSIZE_LOG_DOC_ID.
+
+    Fully non-fatal — all errors are caught and printed. Disabled unless
+    IMAGEBOT_DRIVE_LOG_ENABLED=1 and IMAGEBOT_OVERSIZE_LOG_DOC_ID is set.
+    """
+    if not _is_enabled():
+        return
+
+    if not _GOOGLE_AVAILABLE:
+        print("[oversize-log] google-api-python-client not installed; skipping")
+        return
+
+    oversize_doc_id = os.environ.get(_ENV_OVERSIZE_DOC_ID, "").strip()
+    if not oversize_doc_id:
+        print("[oversize-log] IMAGEBOT_OVERSIZE_LOG_DOC_ID not set; skipping")
+        return
+
+    creds_path = os.environ.get(_ENV_CREDENTIALS, "").strip()
+    if not creds_path or not pathlib.Path(creds_path).is_file():
+        print("[oversize-log] disabled/missing credentials")
+        return
+
+    try:
+        _, docs_service = _build_services(creds_path)
+    except Exception as exc:
+        print(f"[oversize-log] failed to build Google services: {exc}")
+        return
+
+    meta = _read_folder_metadata(folder)
+
+    # Try to read original dims from Pillow if caller didn't supply them.
+    if original_dims is None:
+        original_dims = _get_image_dims(image_path)
+
+    try:
+        block = _build_oversize_block(
+            entry=entry,
+            meta=meta,
+            image_path=image_path,
+            error_text=error_text,
+            original_dims=original_dims,
+            normalized_path=normalized_path,
+            normalized_size=normalized_size,
+            posted_later_url=posted_later_url,
+        )
+        _append_to_doc_end(docs_service, oversize_doc_id, block)
+        print(f"[oversize-log] doc updated: https://docs.google.com/document/d/{oversize_doc_id}/edit")
+    except Exception as exc:
+        print(f"[oversize-log] doc append failed: {exc}")

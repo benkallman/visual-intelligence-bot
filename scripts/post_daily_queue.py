@@ -71,6 +71,7 @@ from src.utils.social_env import load_social_env
 from post_to_x import (  # noqa: E402
     MAX_POST_CHARS,
     SEND_REQUIRED_VARS,
+    _MAX_UPLOAD_BYTES,
     _read_post_bundle,
     _send_post,
 )
@@ -602,6 +603,25 @@ def main(
             }
             log.append(fail_entry)
             _save_log(log)
+            # Log to oversize doc if the failure looks like a size/upload error.
+            try:
+                orig_size = bundle["image_path"].stat().st_size
+                is_size_related = (
+                    orig_size > _MAX_UPLOAD_BYTES
+                    or "too large" in reason.lower()
+                    or "15728640" in reason
+                    or "14680064" in reason
+                )
+                if is_size_related:
+                    from src.integrations.google_drive_log import log_oversized_image as _log_oversize
+                    _log_oversize(
+                        entry=fail_entry,
+                        folder=folder,
+                        image_path=str(bundle["image_path"]),
+                        error_text=reason[:500],
+                    )
+            except Exception as _ov_exc:
+                print(f"[oversize-log] unexpected error: {_ov_exc}")
             return
 
         tweet_id = None
@@ -629,6 +649,24 @@ def main(
             _drive_log_post(entry, folder, bundle["image_path"], bundle["text"])
         except Exception as _drive_exc:
             print(f"[drive-log] unexpected error: {_drive_exc}")
+
+        media_info = response.get("media_info", {})
+        if media_info.get("was_normalized"):
+            try:
+                from src.integrations.google_drive_log import log_oversized_image as _log_oversize
+                tweet_url = f"https://x.com/i/web/status/{tweet_id}" if tweet_id else None
+                _log_oversize(
+                    entry=entry,
+                    folder=folder,
+                    image_path=str(media_info.get("original_path", bundle["image_path"])),
+                    error_text="image normalized before upload",
+                    normalized_path=str(media_info.get("upload_path", "")),
+                    normalized_size=media_info.get("upload_size"),
+                    posted_later_url=tweet_url,
+                    original_dims=media_info.get("original_dims"),
+                )
+            except Exception as _ov_exc:
+                print(f"[oversize-log] unexpected error: {_ov_exc}")
 
         print(f"[queue] posted tweet_id={tweet_id}")
         print(f"[queue] log updated: {LOG_PATH}")
