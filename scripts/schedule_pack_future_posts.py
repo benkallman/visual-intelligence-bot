@@ -157,6 +157,27 @@ def _existing_rank_folders(date_str: str) -> list[tuple[int, Path]]:
     return sorted(result)
 
 
+def _existing_pack_count(date_str: str, pack_id: str) -> int:
+    """Count queue folders on date_str whose metadata.json has pack_id == pack_id."""
+    base = SOCIAL_QUEUE_DIR / date_str
+    if not base.is_dir():
+        return 0
+    count = 0
+    for folder in base.iterdir():
+        if not folder.is_dir():
+            continue
+        meta_path = folder / "metadata.json"
+        if not meta_path.is_file():
+            continue
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            if meta.get("pack_id") == pack_id:
+                count += 1
+        except Exception:
+            pass
+    return count
+
+
 def _item_is_excluded(
     item: dict,
     excluded_slugs: set[str],
@@ -271,6 +292,7 @@ def _write_manifest(
     write_mode: bool,
     per_day: int,
     daily_post_cap: int,
+    pack_daily_cap: int,
     stopped_due_to_rate_limit: bool = False,
 ) -> None:
     out_dir = SCHEDULE_DIR / pack_id / from_date_str
@@ -283,6 +305,7 @@ def _write_manifest(
         "write_mode": write_mode,
         "scheduled_per_day_target": per_day,
         "daily_post_cap": daily_post_cap,
+        "pack_daily_cap": pack_daily_cap,
         "stopped_due_to_rate_limit": stopped_due_to_rate_limit,
         "days": schedule_days,
     }
@@ -296,7 +319,8 @@ def _write_manifest(
         f"**Generated:** {manifest['generated_at']}  ",
         f"**Mode:** {'write' if write_mode else 'dry-run'}  ",
         f"**Scheduled per-day target:** {per_day}  ",
-        f"**Daily post cap (post_daily_queue.py):** {daily_post_cap}  ",
+        f"**Pack daily cap (per-pack quota):** {pack_daily_cap}  ",
+        f"**Global daily post cap (post_daily_queue.py):** {daily_post_cap}  ",
         f"**Stopped due to rate limit:** {stopped_due_to_rate_limit}",
         f"",
     ]
@@ -304,7 +328,7 @@ def _write_manifest(
         lines.append(f"## {day['date']}")
         lines.append(f"")
         lines.append(
-            f"- Existing: {day['existing_count']}  "
+            f"- Existing (this pack): {day.get('existing_for_pack', day.get('existing_count', 0))}  "
             f"Added: {day['added']}  "
             f"Skipped duplicate: {day['skipped_duplicate']}"
         )
@@ -335,6 +359,7 @@ def main(
     days: int,
     per_day: int,
     daily_post_cap: int,
+    pack_daily_cap: int,
     write: bool,
     download_delay: float,
     max_downloads: int,
@@ -346,7 +371,7 @@ def main(
     mode_label = "write" if write else "dry-run"
     print(
         f"[schedule] pack={pack_id}  from_date={from_date_str}  days={days}  "
-        f"per_day={per_day}  daily_post_cap={daily_post_cap}  mode={mode_label}"
+        f"per_day={per_day}  pack_daily_cap={pack_daily_cap}  mode={mode_label}"
     )
     if write:
         print(
@@ -415,21 +440,24 @@ def main(
         date_str = target_date.isoformat()
 
         existing = _existing_rank_folders(date_str)
-        existing_count = len(existing)
         max_existing_rank = max((r for r, _ in existing), default=0)
+        existing_for_pack = _existing_pack_count(date_str, pack_id)
 
-        slots_to_fill = max(0, per_day - existing_count)
+        # Slots are capped by this pack's own quota, not the total folder count.
+        # per_day further limits additions in a single run (useful for large pools).
+        slots_to_fill = min(per_day, max(0, pack_daily_cap - existing_for_pack))
         remaining_pool = len(ranked_pool) - pool_idx
 
         print(
-            f"[schedule] date={date_str}  existing={existing_count}  "
-            f"target={per_day}  slots={slots_to_fill}  remaining_fresh={remaining_pool}"
+            f"[schedule] date={date_str}  existing_for_pack={existing_for_pack}  "
+            f"target_for_pack={pack_daily_cap}  slots={slots_to_fill}  "
+            f"remaining_fresh={remaining_pool}"
         )
 
         if slots_to_fill <= 0:
             schedule_days.append({
                 "date": date_str,
-                "existing_count": existing_count,
+                "existing_for_pack": existing_for_pack,
                 "added": 0,
                 "skipped_duplicate": 0,
                 "items": [],
@@ -516,7 +544,7 @@ def main(
 
         schedule_days.append({
             "date": date_str,
-            "existing_count": existing_count,
+            "existing_for_pack": existing_for_pack,
             "added": day_added,
             "skipped_duplicate": day_skipped_dup,
             "items": day_items,
@@ -548,7 +576,7 @@ def main(
 
     _write_manifest(
         pack_id, from_date_str, schedule_days, write,
-        per_day, daily_post_cap,
+        per_day, daily_post_cap, pack_daily_cap,
         stopped_due_to_rate_limit=stopped_due_to_rate_limit,
     )
 
@@ -575,7 +603,16 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--daily-post-cap", type=int, default=5,
-        help="Maximum total items per date folder (default: 5); informational for the manifest",
+        help="Global maximum posts per date used by post_daily_queue.py (default: 5); recorded in manifest",
+    )
+    parser.add_argument(
+        "--pack-daily-cap", type=int, default=5,
+        metavar="N",
+        help=(
+            "Maximum items this pack may occupy per date folder (default: 5). "
+            "Only this pack's existing folders are counted, so multiple packs "
+            "can each contribute their own quota to the same date."
+        ),
     )
     parser.add_argument(
         "--write", action="store_true",
@@ -609,6 +646,8 @@ if __name__ == "__main__":
         parser.error("--per-day must be greater than 0")
     if args.daily_post_cap <= 0:
         parser.error("--daily-post-cap must be greater than 0")
+    if args.pack_daily_cap <= 0:
+        parser.error("--pack-daily-cap must be greater than 0")
     if args.download_delay_seconds < 0:
         parser.error("--download-delay-seconds must be >= 0")
     if args.max_downloads_per_run <= 0:
@@ -623,6 +662,7 @@ if __name__ == "__main__":
             days=args.days,
             per_day=args.per_day,
             daily_post_cap=args.daily_post_cap,
+            pack_daily_cap=args.pack_daily_cap,
             write=args.write,
             download_delay=args.download_delay_seconds,
             max_downloads=args.max_downloads_per_run,

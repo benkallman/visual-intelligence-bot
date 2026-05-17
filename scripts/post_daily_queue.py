@@ -194,6 +194,29 @@ def _read_source_url(folder: Path) -> str | None:
         return None
 
 
+def _read_pack_id(folder: Path) -> str | None:
+    """Read pack_id from a queue folder's metadata.json."""
+    meta = folder / "metadata.json"
+    if not meta.is_file():
+        return None
+    try:
+        data = json.loads(meta.read_text(encoding="utf-8"))
+        return data.get("pack_id") or None
+    except Exception:
+        return None
+
+
+def _entry_pack_id(entry: dict) -> str | None:
+    """Return pack_id for a log entry: stored field first, metadata.json fallback."""
+    pack_id = entry.get("pack_id")
+    if pack_id:
+        return pack_id
+    folder = entry.get("folder", "")
+    if folder:
+        return _read_pack_id(Path(folder))
+    return None
+
+
 def _normalize_text(text: str) -> str:
     """Lowercase and collapse whitespace for stable text comparison."""
     return " ".join(text.strip().lower().split())
@@ -363,6 +386,7 @@ def main(
     auto_build_top: int = 3,
     rank: int | None = None,
     skip_cooldown: bool = False,
+    pack_filter: str | None = None,
 ) -> None:
     """Scan the queue and post (or preview) the next eligible rank.
 
@@ -373,27 +397,51 @@ def main(
     and (if --skip-cooldown) the spacing check. The post is still duplicate-
     checked and logged normally.
 
+    When --pack is given, only folders whose metadata.json has pack_id matching
+    that value are considered. posted_today and done_ranks_today are scoped to
+    that pack; max_posts applies per-pack. Cooldown and duplicate detection
+    remain global.
+
     Exits 0 in all expected non-error states (wait, cap reached, nothing left).
     Exits 1 only on missing credentials or an API error.
     """
     date_str = _resolve_date(date_value)
     print(f"[queue] date={date_str}")
+    if pack_filter:
+        print(f"[queue] pack={pack_filter}")
 
     log = _load_log()
 
-    # Entries that count toward the daily cap (real posts only).
-    posted_today = [
-        e for e in log
-        if e.get("date") == date_str and e.get("status", "posted") in _POSTED_STATUSES
-    ]
-    # Ranks we must not retry (posted + all skip varieties).
-    done_ranks_today: set[int] = {
-        e["rank"] for e in log
-        if e.get("date") == date_str and e.get("status", "posted") in _DONE_STATUSES
-    }
+    if pack_filter:
+        # Scope posted/done counts to this pack only.
+        posted_today = [
+            e for e in log
+            if e.get("date") == date_str
+            and e.get("status", "posted") in _POSTED_STATUSES
+            and _entry_pack_id(e) == pack_filter
+        ]
+        done_ranks_today: set[int] = {
+            e["rank"] for e in log
+            if e.get("date") == date_str
+            and e.get("status", "posted") in _DONE_STATUSES
+            and _entry_pack_id(e) == pack_filter
+        }
+    else:
+        # Global (all-pack) behaviour — backward-compatible default.
+        posted_today = [
+            e for e in log
+            if e.get("date") == date_str and e.get("status", "posted") in _POSTED_STATUSES
+        ]
+        done_ranks_today = {
+            e["rank"] for e in log
+            if e.get("date") == date_str and e.get("status", "posted") in _DONE_STATUSES
+        }
 
     rank_summary = sorted(done_ranks_today) if done_ranks_today else "none"
-    print(f"[queue] posted_today={len(posted_today)}/{max_posts}  done_ranks={rank_summary}")
+    if pack_filter:
+        print(f"[queue] posted_today_for_pack={len(posted_today)}/{max_posts}  done_ranks={rank_summary}")
+    else:
+        print(f"[queue] posted_today={len(posted_today)}/{max_posts}  done_ranks={rank_summary}")
 
     # --rank bypasses the daily cap and optionally the cooldown.
     if rank is None:
@@ -421,6 +469,8 @@ def main(
                 return
 
     rank_folders = _discover_rank_folders(date_str)
+    if pack_filter:
+        rank_folders = [(r, f) for r, f in rank_folders if _read_pack_id(f) == pack_filter]
 
     if not rank_folders and auto_build_pack:
         print(
@@ -476,6 +526,7 @@ def main(
                     "date": date_str,
                     "rank": rank,
                     "folder": str(folder),
+                    "pack_id": _read_pack_id(folder),
                     "status": "skipped_duplicate",
                     "reason": dup_reason,
                     "skipped_at": datetime.datetime.now().isoformat(timespec="seconds"),
@@ -501,6 +552,7 @@ def main(
                         "date": date_str,
                         "rank": rank,
                         "folder": str(folder),
+                        "pack_id": _read_pack_id(folder),
                         "status": "skipped_over_280",
                         "reason": (
                             f"post text is {char_count} chars "
@@ -544,6 +596,7 @@ def main(
             "date": date_str,
             "rank": rank,
             "folder": str(folder),
+            "pack_id": _read_pack_id(folder),
             "tweet_id": tweet_id,
             "posted_at": datetime.datetime.now().isoformat(timespec="seconds"),
             "text_preview": bundle["text"][:TEXT_PREVIEW_MAX],
@@ -609,6 +662,17 @@ if __name__ == "__main__":
         "--skip-cooldown", action="store_true",
         help="Skip the min-minutes-between-posts spacing check.",
     )
+    parser.add_argument(
+        "--pack", default=None,
+        metavar="PACK_ID",
+        help=(
+            "Restrict to a specific source pack. Only queue folders whose "
+            "metadata.json has pack_id matching PACK_ID are considered. "
+            "posted_today and done_ranks counts are scoped to this pack; "
+            "--max-posts applies per-pack. Cooldown and duplicate detection "
+            "remain global."
+        ),
+    )
     args = parser.parse_args()
     try:
         main(
@@ -620,6 +684,7 @@ if __name__ == "__main__":
             auto_build_top=args.auto_build_top,
             rank=args.rank,
             skip_cooldown=args.skip_cooldown,
+            pack_filter=args.pack,
         )
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"[queue] Error: {exc}", file=sys.stderr)
