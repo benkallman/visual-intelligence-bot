@@ -54,8 +54,12 @@ MAX_POST_CHARS = 280
 _RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 # Seconds to sleep before each successive retry (3 retries → 4 total attempts).
 _RETRY_DELAYS_SEC = (30, 90, 180)
-# Images with either dimension above this are downsampled before upload.
+# Max pixel dimension before downsampling.
 _MAX_IMAGE_DIMENSION = 4096
+# X hard limit is 15 MB; stay 1 MB below to avoid boundary conditions.
+_MAX_UPLOAD_BYTES = 14 * 1024 * 1024
+# JPEG quality ladder: try each in order until file is under _MAX_UPLOAD_BYTES.
+_QUALITY_LADDER = (92, 88, 84, 80, 76, 72)
 
 SEND_REQUIRED_VARS = [
     "TWITTER_API_KEY",
@@ -228,44 +232,76 @@ def _verify_credentials(credentials: dict[str, str]) -> None:
         print(resp.text)
 
 
-def _prepare_upload_image(image_path: Path) -> Path:
-    """Return a resized JPEG copy if either dimension exceeds _MAX_IMAGE_DIMENSION.
+def _prepare_media_for_x(image_path: Path) -> Path:
+    """Return a JPEG-normalized copy if the image exceeds X upload limits.
 
-    The original file is never modified. If Pillow is absent or resize fails,
-    the original path is returned unchanged.
+    Checks both file size (_MAX_UPLOAD_BYTES = 14 MB) and pixel dimensions
+    (_MAX_IMAGE_DIMENSION = 4096 px). If within both limits, returns the
+    original path unchanged — no copy is made, no disk write.
+
+    When normalization is needed, writes to temp/post_media/ and steps through
+    JPEG quality values (92 → 88 → 84 → 80 → 76 → 72) until the file fits
+    under 14 MB. If quality 72 still exceeds the limit, returns the quality-72
+    version anyway so the upload can attempt to proceed. The original file is
+    never modified.
     """
     try:
-        from PIL import Image  # optional — Pillow is already in requirements
+        from PIL import Image
     except ImportError:
+        print("[post-x] Pillow not available; skipping media normalization")
         return image_path
+
+    orig_size = image_path.stat().st_size
 
     try:
         with Image.open(image_path) as img:
             orig_w, orig_h = img.size
-        if orig_w <= _MAX_IMAGE_DIMENSION and orig_h <= _MAX_IMAGE_DIMENSION:
-            return image_path
     except Exception as exc:
-        print(f"[post-x] image size check failed ({exc}); using original")
+        print(f"[post-x] could not inspect image ({exc}); using original")
         return image_path
 
-    try:
-        temp_dir = Path(ROOT_DIR) / "temp" / "post_media"
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        out_path = temp_dir / image_path.name
-        with Image.open(image_path) as img:
-            img.thumbnail((_MAX_IMAGE_DIMENSION, _MAX_IMAGE_DIMENSION), Image.LANCZOS)
-            if img.mode in ("RGBA", "P", "LA"):
-                img = img.convert("RGB")
-            new_size = img.size
-            img.save(out_path, "JPEG", quality=92)
-        print(
-            f"[post-x] image normalized: {orig_w}x{orig_h} → {new_size[0]}x{new_size[1]}"
-            f" ({out_path.stat().st_size} bytes) → {out_path}"
-        )
-        return out_path
-    except Exception as exc:
-        print(f"[post-x] image normalization failed ({exc}); using original")
+    needs_resize = orig_w > _MAX_IMAGE_DIMENSION or orig_h > _MAX_IMAGE_DIMENSION
+    if orig_size <= _MAX_UPLOAD_BYTES and not needs_resize:
         return image_path
+
+    temp_dir = Path(ROOT_DIR) / "temp" / "post_media"
+    try:
+        temp_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        print(f"[post-x] could not create temp dir ({exc}); using original")
+        return image_path
+
+    out_path = temp_dir / image_path.name
+
+    for quality in _QUALITY_LADDER:
+        try:
+            with Image.open(image_path) as img:
+                if needs_resize:
+                    img.thumbnail((_MAX_IMAGE_DIMENSION, _MAX_IMAGE_DIMENSION), Image.LANCZOS)
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                img.save(out_path, "JPEG", quality=quality)
+        except Exception as exc:
+            print(f"[post-x] normalization error at quality={quality}: {exc}; using original")
+            return image_path
+
+        out_size = out_path.stat().st_size
+        if out_size <= _MAX_UPLOAD_BYTES:
+            print(
+                f"[post-x] prepared media: original={image_path} size={orig_size}"
+                f" upload={out_path} size={out_size} quality={quality}"
+            )
+            return out_path
+
+        print(f"[post-x] quality={quality}: {out_size} bytes still over limit; reducing")
+
+    # Exhausted the quality ladder — use the smallest version produced.
+    out_size = out_path.stat().st_size
+    print(
+        f"[post-x] prepared media: original={image_path} size={orig_size}"
+        f" upload={out_path} size={out_size} quality=72 (limit not met)"
+    )
+    return out_path
 
 
 def _upload_media(image_path: Path, credentials: dict[str, str]) -> str:
@@ -275,7 +311,7 @@ def _upload_media(image_path: Path, credentials: dict[str, str]) -> str:
     _RETRY_DELAYS_SEC (3 retries = 4 total attempts). Raises RuntimeError on
     permanent failures or after all retries are exhausted.
     """
-    upload_path = _prepare_upload_image(image_path)
+    upload_path = _prepare_media_for_x(image_path)
     mime_type = mimetypes.guess_type(upload_path.name)[0] or "image/jpeg"
     delays = list(_RETRY_DELAYS_SEC)
     total_attempts = len(delays) + 1
