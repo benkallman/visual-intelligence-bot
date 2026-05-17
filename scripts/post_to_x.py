@@ -49,6 +49,14 @@ SOCIAL_EXPORTS_DIR = os.path.join(ROOT_DIR, "exports", "social")
 UPLOAD_MEDIA_URL = "https://upload.twitter.com/1.1/media/upload.json"
 CREATE_POST_URL = "https://api.x.com/2/tweets"
 MAX_POST_CHARS = 280
+
+# HTTP status codes that warrant a retry on media upload.
+_RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+# Seconds to sleep before each successive retry (3 retries → 4 total attempts).
+_RETRY_DELAYS_SEC = (30, 90, 180)
+# Images with either dimension above this are downsampled before upload.
+_MAX_IMAGE_DIMENSION = 4096
+
 SEND_REQUIRED_VARS = [
     "TWITTER_API_KEY",
     "TWITTER_API_SECRET",
@@ -220,40 +228,138 @@ def _verify_credentials(credentials: dict[str, str]) -> None:
         print(resp.text)
 
 
+def _prepare_upload_image(image_path: Path) -> Path:
+    """Return a resized JPEG copy if either dimension exceeds _MAX_IMAGE_DIMENSION.
+
+    The original file is never modified. If Pillow is absent or resize fails,
+    the original path is returned unchanged.
+    """
+    try:
+        from PIL import Image  # optional — Pillow is already in requirements
+    except ImportError:
+        return image_path
+
+    try:
+        with Image.open(image_path) as img:
+            orig_w, orig_h = img.size
+        if orig_w <= _MAX_IMAGE_DIMENSION and orig_h <= _MAX_IMAGE_DIMENSION:
+            return image_path
+    except Exception as exc:
+        print(f"[post-x] image size check failed ({exc}); using original")
+        return image_path
+
+    try:
+        temp_dir = Path(ROOT_DIR) / "temp" / "post_media"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        out_path = temp_dir / image_path.name
+        with Image.open(image_path) as img:
+            img.thumbnail((_MAX_IMAGE_DIMENSION, _MAX_IMAGE_DIMENSION), Image.LANCZOS)
+            if img.mode in ("RGBA", "P", "LA"):
+                img = img.convert("RGB")
+            new_size = img.size
+            img.save(out_path, "JPEG", quality=92)
+        print(
+            f"[post-x] image normalized: {orig_w}x{orig_h} → {new_size[0]}x{new_size[1]}"
+            f" ({out_path.stat().st_size} bytes) → {out_path}"
+        )
+        return out_path
+    except Exception as exc:
+        print(f"[post-x] image normalization failed ({exc}); using original")
+        return image_path
+
+
+def _upload_media(image_path: Path, credentials: dict[str, str]) -> str:
+    """Upload image to the X v1.1 media endpoint with retry on transient errors.
+
+    Retries on HTTP 429/500/502/503/504 with progressive delays defined by
+    _RETRY_DELAYS_SEC (3 retries = 4 total attempts). Raises RuntimeError on
+    permanent failures or after all retries are exhausted.
+    """
+    upload_path = _prepare_upload_image(image_path)
+    mime_type = mimetypes.guess_type(upload_path.name)[0] or "image/jpeg"
+    delays = list(_RETRY_DELAYS_SEC)
+    total_attempts = len(delays) + 1
+    last_response: requests.Response | None = None
+
+    for attempt in range(1, total_attempts + 1):
+        auth_header = _oauth_header(
+            "POST", UPLOAD_MEDIA_URL,
+            credentials["TWITTER_API_KEY"], credentials["TWITTER_API_SECRET"],
+            credentials["TWITTER_ACCESS_TOKEN"], credentials["TWITTER_ACCESS_SECRET"],
+        )
+        try:
+            with open(upload_path, "rb") as f:
+                resp = requests.post(
+                    UPLOAD_MEDIA_URL,
+                    headers={"Authorization": auth_header},
+                    files={"media": (upload_path.name, f, mime_type)},
+                    timeout=60,
+                )
+        except requests.exceptions.RequestException as exc:
+            # Network-level failure — treat as retryable.
+            print(f"[post-x] media upload attempt {attempt}: network error: {exc}")
+            if attempt <= len(delays):
+                delay = delays[attempt - 1]
+                print(f"[post-x] retrying in {delay}s …")
+                time.sleep(delay)
+            continue
+
+        last_response = resp
+        print(f"[post-x] media upload attempt {attempt}: HTTP {resp.status_code}")
+
+        if resp.status_code == 200:
+            try:
+                body = resp.json()
+                print(json.dumps(body, indent=2, ensure_ascii=False))
+                media_id = body.get("media_id_string")
+            except Exception:
+                print(resp.text)
+                media_id = None
+            if media_id:
+                return media_id
+            raise RuntimeError(
+                f"X media upload returned HTTP 200 but no media_id_string. "
+                f"image={upload_path}  response={resp.text[:500]}"
+            )
+
+        if resp.status_code not in _RETRY_STATUSES:
+            try:
+                body_text = json.dumps(resp.json(), indent=2, ensure_ascii=False)
+            except Exception:
+                body_text = resp.text
+            raise RuntimeError(
+                f"X media upload failed (non-retryable). "
+                f"image={upload_path}  HTTP {resp.status_code}  {body_text[:500]}"
+            )
+
+        # Retryable status code.
+        if attempt <= len(delays):
+            delay = delays[attempt - 1]
+            print(f"[post-x] media upload error (HTTP {resp.status_code}); retrying in {delay}s …")
+            time.sleep(delay)
+
+    # All attempts exhausted.
+    if last_response is not None:
+        try:
+            tail = json.dumps(last_response.json(), indent=2, ensure_ascii=False)
+        except Exception:
+            tail = last_response.text
+        status = last_response.status_code
+    else:
+        tail, status = "(no response — network error on all attempts)", "N/A"
+    raise RuntimeError(
+        f"X media upload failed after {total_attempts} attempts. "
+        f"image={upload_path}  HTTP {status}  {tail[:500]}"
+    )
+
+
 def _send_post(bundle: dict, credentials: dict[str, str]) -> dict:
     """Upload the image then create the tweet, returning the API response body.
 
-    Order matters: X requires a media_id obtained from the v1.1 media upload
-    endpoint before tweet creation. The v2 tweets endpoint then references
-    that id. Credentials are used only to sign requests and are never printed.
+    Raises RuntimeError on any failure so callers do not need to handle
+    requests.HTTPError separately.
     """
-    auth_header = _oauth_header(
-        "POST",
-        UPLOAD_MEDIA_URL,
-        credentials["TWITTER_API_KEY"],
-        credentials["TWITTER_API_SECRET"],
-        credentials["TWITTER_ACCESS_TOKEN"],
-        credentials["TWITTER_ACCESS_SECRET"],
-    )
-
-    mime_type = mimetypes.guess_type(bundle["image_path"].name)[0] or "image/jpeg"
-    with open(bundle["image_path"], "rb") as f:
-        files = {"media": (bundle["image_path"].name, f, mime_type)}
-        upload_response = requests.post(
-            UPLOAD_MEDIA_URL,
-            headers={"Authorization": auth_header},
-            files=files,
-            timeout=60,
-        )
-    print(f"[post-x] Media upload response: HTTP {upload_response.status_code}")
-    try:
-        print(json.dumps(upload_response.json(), indent=2, ensure_ascii=False))
-    except Exception:
-        print(upload_response.text)
-    upload_response.raise_for_status()
-    media_id = upload_response.json().get("media_id_string")
-    if not media_id:
-        raise RuntimeError("X media upload did not return media_id_string")
+    media_id = _upload_media(bundle["image_path"], credentials)
 
     tweet_response = _create_tweet_v2(bundle["text"], media_id, credentials)
     print(f"[post-x] Response: HTTP {tweet_response.status_code}")
@@ -262,7 +368,13 @@ def _send_post(bundle: dict, credentials: dict[str, str]) -> dict:
     except Exception:
         response_body = {"raw": tweet_response.text}
     print(json.dumps(response_body, indent=2, ensure_ascii=False))
-    tweet_response.raise_for_status()
+    try:
+        tweet_response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        raise RuntimeError(
+            f"X tweet creation failed: HTTP {tweet_response.status_code}  "
+            f"{tweet_response.text[:500]}"
+        ) from exc
     return response_body
 
 

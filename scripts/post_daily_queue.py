@@ -586,7 +586,23 @@ def main(
             sys.exit(1)
 
         credentials = {key: str(resolved[key]["value"]) for key in SEND_REQUIRED_VARS}
-        response = _send_post(bundle, credentials)
+        try:
+            response = _send_post(bundle, credentials)
+        except RuntimeError as exc:
+            reason = str(exc)
+            print(f"[queue] post failed: {reason}")
+            fail_entry = {
+                "date": date_str,
+                "rank": rank,
+                "folder": str(folder),
+                "pack_id": _read_pack_id(folder),
+                "failed_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                "status": "post_failed",
+                "reason": reason[:500],
+            }
+            log.append(fail_entry)
+            _save_log(log)
+            return
 
         tweet_id = None
         if isinstance(response, dict):
