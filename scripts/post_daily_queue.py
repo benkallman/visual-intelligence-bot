@@ -32,7 +32,7 @@ The script is designed to be called in a polling loop:
     while ($true) {
         python scripts/post_daily_queue.py --date today --max-posts 3 `
             --min-minutes-between-posts 180 `
-            --auto-build-pack japanese_wood_historical --auto-build-top 3 `
+            --skip-cooldown --auto-build-pack japanese_wood_historical --auto-build-top 3 `
             --send
         Start-Sleep -Seconds 1800
     }
@@ -42,9 +42,9 @@ Each invocation either posts one item or exits 0 with a readable reason.
 Usage:
     python scripts/post_daily_queue.py --date today
     python scripts/post_daily_queue.py --date today --max-posts 3 --min-minutes-between-posts 180
-    python scripts/post_daily_queue.py --date today --max-posts 3 --min-minutes-between-posts 180 --send
+    python scripts/post_daily_queue.py --date today --max-posts 3 --min-minutes-between-posts 180 --skip-cooldown --send
     python scripts/post_daily_queue.py --date today --max-posts 3 --min-minutes-between-posts 180 \\
-        --auto-build-pack japanese_wood_historical --auto-build-top 3 --send
+        --skip-cooldown --auto-build-pack japanese_wood_historical --auto-build-top 3 --send
 """
 
 from __future__ import annotations
@@ -57,6 +57,8 @@ import os
 import re
 import sys
 from pathlib import Path
+
+import httpx
 
 # Ensure project root is on the path before local imports.
 _SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -86,7 +88,13 @@ HASHTAGS = "#art #visualintelligence #rareimage"
 # Statuses that count toward the daily post cap.
 _POSTED_STATUSES = frozenset({"posted", "posted_manual_backfill"})
 # Statuses that mean "do not attempt this rank again".
-_DONE_STATUSES = frozenset({"posted", "posted_manual_backfill", "skipped_duplicate", "skipped_over_280"})
+_DONE_STATUSES = frozenset({
+    "posted",
+    "posted_manual_backfill",
+    "skipped_duplicate",
+    "skipped_over_280",
+    "skipped_bad_image",
+})
 
 
 # ---------------------------------------------------------------------------
@@ -205,6 +213,50 @@ def _read_pack_id(folder: Path) -> str | None:
         return data.get("pack_id") or None
     except Exception:
         return None
+
+
+def _read_folder_metadata(folder: Path) -> dict:
+    meta = folder / "metadata.json"
+    if not meta.is_file():
+        return {}
+    try:
+        return json.loads(meta.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _repair_missing_image(folder: Path) -> bool:
+    image_path = folder / "image.jpg"
+    if image_path.is_file():
+        return True
+
+    meta = _read_folder_metadata(folder)
+    image_url = (meta.get("image_url") or "").strip()
+    if not image_url:
+        return False
+
+    try:
+        resp = httpx.get(
+            image_url,
+            headers={"User-Agent": "visual-intelligence-bot/0.1 (+https://github.com/benkallman/visual-intelligence-bot)"},
+            follow_redirects=True,
+            timeout=60,
+        )
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "")
+        if "text/" in content_type or "html" in content_type:
+            return False
+        image_path.write_bytes(resp.content)
+        print(f"[queue] repaired missing image: {folder.name}")
+        return True
+    except Exception as exc:
+        print(f"[queue] could not repair image for {folder.name}: {exc}")
+        try:
+            if image_path.exists():
+                image_path.unlink()
+        except OSError:
+            pass
+        return False
 
 
 def _entry_pack_id(entry: dict) -> str | None:
@@ -511,6 +563,24 @@ def main(
 
     # Scan eligible ranks in order, skipping problems, until we find one to post.
     for rank, folder in eligible:
+        image_path = folder / "image.jpg"
+        if not image_path.is_file():
+            if not _repair_missing_image(folder):
+                print(f"[queue] skipped bad image rank={rank}  folder={folder.name}")
+                if send:
+                    log.append({
+                        "date": date_str,
+                        "rank": rank,
+                        "folder": str(folder),
+                        "pack_id": _read_pack_id(folder),
+                        "status": "skipped_bad_image",
+                        "reason": "missing image.jpg and repair failed",
+                        "skipped_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                    })
+                    _save_log(log)
+                else:
+                    print("[queue] dry run: next run with --send will record this skip and advance")
+                continue
 
         try:
             bundle = _read_post_bundle(date_str, rank)
@@ -628,29 +698,34 @@ def main(
         if isinstance(response, dict):
             tweet_id = (response.get("data") or {}).get("id")
 
+        media_info = response.get("media_info", {}) if isinstance(response, dict) else {}
+        exact_image_path = media_info.get("upload_path") or bundle["image_path"]
+        tweet_url = f"https://x.com/i/web/status/{tweet_id}" if tweet_id else ""
+
         entry = {
             "date": date_str,
             "rank": rank,
             "folder": str(folder),
             "pack_id": _read_pack_id(folder),
             "tweet_id": tweet_id,
+            "social_post_url": tweet_url,
             "posted_at": datetime.datetime.now().isoformat(timespec="seconds"),
             "text_preview": bundle["text"][:TEXT_PREVIEW_MAX],
             "status": "posted",
             "image_sha256": _image_sha256(bundle["image_path"]),
             "post_text_sha256": hashlib.sha256(_normalize_text(bundle["text"]).encode()).hexdigest(),
             "source_url": _read_source_url(folder),
+            "local_image_path": str(exact_image_path),
         }
         log.append(entry)
         _save_log(log)
 
         try:
-            from src.integrations.google_drive_log import log_post as _drive_log_post
-            _drive_log_post(entry, folder, bundle["image_path"], bundle["text"])
+            from src.drive.post_log import log_post as _drive_log_post
+            _drive_log_post(entry, folder, exact_image_path, bundle["text"])
         except Exception as _drive_exc:
-            print(f"[drive-log] unexpected error: {_drive_exc}")
+            print(f"[drive_log] failed upload/log append err={_drive_exc}")
 
-        media_info = response.get("media_info", {})
         if media_info.get("was_normalized"):
             try:
                 from src.integrations.google_drive_log import log_oversized_image as _log_oversize

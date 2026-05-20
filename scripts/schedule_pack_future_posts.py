@@ -35,18 +35,22 @@ Usage:
   python scripts/schedule_pack_future_posts.py --pack japanese_wood_historical \\
       --from-date today --days 7 --per-day 20 --write \\
       --download-delay-seconds 5 --max-downloads-per-run 25
+  python scripts/schedule_pack_future_posts.py --pack tibetan_mystical_traditions_historical \\
+      --from-date today --days 1 --include-today --per-day 5 --write
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import re
 import shutil
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
 import httpx
@@ -58,11 +62,12 @@ from export_pack_social import (
     SOCIAL_PACKS_DIR,
     SOCIAL_QUEUE_DIR,
     _clean_text,
+    _display_title,
+    _item_slug,
     _is_raster_url,
     _load_from_disk,
     _load_from_export,
     _make_caption,
-    _slug,
     _sort_key,
 )
 
@@ -102,6 +107,87 @@ def _load_log() -> list[dict]:
         return []
 
 
+def _normalize_text(text: str) -> str:
+    return " ".join((text or "").strip().lower().split())
+
+
+def _build_posted_signals(log: list[dict]) -> dict[str, set[str]]:
+    image_keys: set[str] = set()
+    source_urls: set[str] = set()
+    text_hashes: set[str] = set()
+    slugs: set[str] = set()
+
+    for entry in log:
+        if entry.get("status") not in {"posted", "posted_manual_backfill"}:
+            continue
+        folder = entry.get("folder") or ""
+        if folder:
+            slug = re.sub(r"^\d+-", "", Path(folder).name)
+            if slug:
+                slugs.add(slug)
+        src_url = str(entry.get("source_url") or "").strip()
+        if src_url:
+            source_urls.add(src_url)
+            image_keys.add(src_url)
+        image_hash = str(entry.get("image_sha256") or "").strip()
+        if image_hash:
+            image_keys.add(image_hash)
+        text_hash = str(entry.get("post_text_sha256") or "").strip()
+        if text_hash:
+            text_hashes.add(text_hash)
+
+    return {
+        "image_keys": image_keys,
+        "source_urls": source_urls,
+        "text_hashes": text_hashes,
+        "slugs": slugs,
+    }
+
+
+def _read_queue_metadata(folder: Path) -> dict:
+    meta_path = folder / "metadata.json"
+    if not meta_path.is_file():
+        return {}
+    try:
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _repair_queue_image(folder: Path, delay_seconds: float = 0) -> bool:
+    image_path = folder / "image.jpg"
+    if image_path.is_file():
+        return True
+
+    meta = _read_queue_metadata(folder)
+    image_url = (meta.get("image_url") or "").strip()
+    if not image_url:
+        return False
+
+    try:
+        _download_image_scheduled(image_url, image_path, delay_seconds)
+        print(f"[schedule] repaired missing image: {folder.name}")
+        return True
+    except Exception as exc:
+        print(f"[schedule] could not repair image for {folder.name}: {exc}")
+        try:
+            if image_path.exists():
+                image_path.unlink()
+        except OSError:
+            pass
+        return False
+
+
+def _folder_is_valid(folder: Path, repair_missing: bool = False, download_delay: float = 0) -> bool:
+    if not (folder / "metadata.json").is_file() or not (folder / "post.txt").is_file():
+        return False
+    if (folder / "image.jpg").is_file():
+        return True
+    if repair_missing:
+        return _repair_queue_image(folder, delay_seconds=download_delay)
+    return False
+
+
 def _build_exclusion_sets(pack_id: str) -> tuple[set[str], set[str]]:
     """Return (excluded_slugs, excluded_source_urls) covering log + queue + staging."""
     excluded_slugs: set[str] = set()
@@ -124,9 +210,15 @@ def _build_exclusion_sets(pack_id: str) -> tuple[set[str], set[str]]:
             for folder in date_dir.iterdir():
                 if not folder.is_dir():
                     continue
+                if not _folder_is_valid(folder):
+                    continue
                 m = re.match(r"^\d+-(.+)$", folder.name)
                 if m:
                     excluded_slugs.add(m.group(1))
+                meta = _read_queue_metadata(folder)
+                src_url = (meta.get("source_url") or meta.get("page_url") or "").strip()
+                if src_url:
+                    excluded_urls.add(src_url)
 
     staging_root = SOCIAL_PACKS_DIR / pack_id
     if staging_root.is_dir():
@@ -151,6 +243,8 @@ def _existing_rank_folders(date_str: str) -> list[tuple[int, Path]]:
     for folder in base.iterdir():
         if not folder.is_dir():
             continue
+        if not _folder_is_valid(folder):
+            continue
         m = re.match(r"^(\d+)-", folder.name)
         if m:
             result.append((int(m.group(1)), folder))
@@ -165,6 +259,8 @@ def _existing_pack_count(date_str: str, pack_id: str) -> int:
     count = 0
     for folder in base.iterdir():
         if not folder.is_dir():
+            continue
+        if not _folder_is_valid(folder):
             continue
         meta_path = folder / "metadata.json"
         if not meta_path.is_file():
@@ -183,8 +279,7 @@ def _item_is_excluded(
     excluded_slugs: set[str],
     excluded_urls: set[str],
 ) -> str | None:
-    title = _clean_text(item.get("title") or "")
-    candidate_slug = _slug(title)
+    candidate_slug = _item_slug(item)
     if candidate_slug in excluded_slugs:
         return f"slug already in use: {candidate_slug}"
     src_url = item.get("source_url") or item.get("page_url") or ""
@@ -238,12 +333,12 @@ def _write_item(
     Raises _RateLimitError when Wikimedia returns 429 (incomplete folder is
     cleaned up before re-raising so the caller sees a consistent state).
     """
-    title = _clean_text(item.get("title") or "Untitled")
+    title = _display_title(item)
     image_url = item.get("direct_image_url") or ""
     year = item.get("date_year")
     license_text = _clean_text(item.get("license") or "unknown")
     page_url = item.get("source_url") or item.get("page_url") or ""
-    slug_str = _slug(title)
+    slug_str = _item_slug(item)
     folder_name = f"{rank:02d}-{slug_str}"
     folder = SOCIAL_QUEUE_DIR / date_str / folder_name
 
@@ -349,6 +444,48 @@ def _write_manifest(
     print(f"[schedule] manifest written: {md_path}")
 
 
+def _rebuild_pack_export(pack_id: str, date_str: str) -> None:
+    try:
+        import export_pack_candidates as _epc
+    except ImportError as exc:
+        print(f"[schedule] could not import export_pack_candidates: {exc}")
+        return
+
+    print(f"[schedule] rebuilding candidate export for pack={pack_id} date={date_str}")
+    try:
+        _epc.main(pack_id=pack_id, date_str=date_str)
+    except Exception as exc:
+        print(f"[schedule] export rebuild failed: {exc}")
+
+
+def _refresh_pack_candidates(pack_id: str, date_str: str, refresh_max_total: int) -> None:
+    try:
+        import run_source_pack as _rsp
+    except ImportError as exc:
+        print(f"[schedule] could not import run_source_pack: {exc}")
+        return
+
+    print(
+        f"[schedule] refreshing candidate pool for pack={pack_id} "
+        f"(discover-only max_total={refresh_max_total})"
+    )
+    try:
+        _rsp.main(
+            pack_id=pack_id,
+            max_total=refresh_max_total,
+            per_query_limit=max(20, min(50, refresh_max_total)),
+            dry_run=False,
+            discover_only=True,
+            ingest_only=False,
+            limit_ingest=None,
+        )
+    except Exception as exc:
+        print(f"[schedule] candidate refresh failed: {exc}")
+        return
+
+    _rebuild_pack_export(pack_id, date_str)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -364,10 +501,15 @@ def main(
     download_delay: float,
     max_downloads: int,
     retry_after_429: int,
+    include_today: bool = False,
+    refresh_if_empty: bool = False,
+    refresh_max_total: int = 40,
 ) -> None:
     sys.stdout.reconfigure(errors="replace")
 
     from_date = datetime.date.fromisoformat(from_date_str)
+    log = _load_log()
+    posted_history = _build_posted_signals(log)
     mode_label = "write" if write else "dry-run"
     print(
         f"[schedule] pack={pack_id}  from_date={from_date_str}  days={days}  "
@@ -383,6 +525,9 @@ def main(
 
     # Load candidates from the pack export for from_date
     items = _load_from_export(pack_id, from_date_str)
+    if items is None:
+        _rebuild_pack_export(pack_id, from_date_str)
+        items = _load_from_export(pack_id, from_date_str)
     if items is not None:
         src = f"exports/source-packs/{pack_id}/{from_date_str}/candidates.json"
         print(f"[schedule] loaded {len(items)} candidates from {src}")
@@ -391,9 +536,17 @@ def main(
         print(f"[schedule] loaded {len(items)} candidates from disk (fallback)")
 
     if not items:
-        print(f"[schedule] no candidates found for pack={pack_id!r}")
-        print(f"[schedule] run: python scripts/export_pack_candidates.py --pack {pack_id} --date {from_date_str}")
-        return
+        if refresh_if_empty:
+            _refresh_pack_candidates(pack_id, from_date_str, refresh_max_total)
+            items = _load_from_export(pack_id, from_date_str) or _load_from_disk(pack_id)
+        if not items:
+            print(f"[schedule] no candidates found for pack={pack_id!r}")
+            print(f"[schedule] run: python scripts/export_pack_candidates.py --pack {pack_id} --date {from_date_str}")
+            print(
+                f"[schedule] or refresh candidates: python scripts/run_source_pack.py "
+                f"--pack {pack_id} --max-total {refresh_max_total} --discover-only"
+            )
+            return
 
     raster = [it for it in items if _is_raster_url(it.get("direct_image_url") or "")]
     n_non_raster = len(items) - len(raster)
@@ -417,8 +570,20 @@ def main(
     print()
 
     if not fresh:
-        print("[schedule] no fresh candidates to schedule.")
-        return
+        if refresh_if_empty:
+            _refresh_pack_candidates(pack_id, from_date_str, refresh_max_total)
+            items = _load_from_export(pack_id, from_date_str) or _load_from_disk(pack_id)
+            raster = [it for it in items if _is_raster_url(it.get("direct_image_url") or "")]
+            excluded_slugs, excluded_urls = _build_exclusion_sets(pack_id)
+            fresh = []
+            for item in raster:
+                if not _item_is_excluded(item, excluded_slugs, excluded_urls):
+                    fresh.append(item)
+            print(f"[schedule] fresh candidates after refresh: {len(fresh)}")
+            print()
+        if not fresh:
+            print("[schedule] no fresh candidates to schedule.")
+            return
 
     ranked_pool = sorted(fresh, key=_sort_key, reverse=True)
 
@@ -428,7 +593,10 @@ def main(
     pool_idx = 0
     schedule_days: list[dict] = []
 
-    for day_offset in range(1, days + 1):
+    start_offset = 0 if include_today else 1
+    end_offset = start_offset + days
+
+    for day_offset in range(start_offset, end_offset):
         if stop_reason:
             break
         if write and download_count >= max_downloads:
@@ -439,12 +607,87 @@ def main(
         target_date = from_date + datetime.timedelta(days=day_offset)
         date_str = target_date.isoformat()
 
+        if write:
+            base = SOCIAL_QUEUE_DIR / date_str
+            if base.is_dir():
+                for folder in base.iterdir():
+                    if folder.is_dir():
+                        _folder_is_valid(folder, repair_missing=True, download_delay=download_delay)
+
         existing = _existing_rank_folders(date_str)
         max_existing_rank = max((r for r, _ in existing), default=0)
-        existing_for_pack = _existing_pack_count(date_str, pack_id)
+
+        posted_ranks_today_for_pack = {
+            int(entry["rank"])
+            for entry in log
+            if entry.get("date") == date_str
+            and entry.get("pack_id") == pack_id
+            and entry.get("status") in {"posted", "posted_manual_backfill"}
+            and isinstance(entry.get("rank"), int)
+        }
 
         # Slots are capped by this pack's own quota, not the total folder count.
         # per_day further limits additions in a single run (useful for large pools).
+        existing_date_slugs: set[str] = set()
+        existing_date_source_urls: set[str] = set()
+        existing_date_candidate_ids: set[str] = set()
+        existing_date_text_hashes: set[str] = set()
+
+        existing_details: list[dict] = []
+        for rank_value, ef in existing:
+            meta = _read_queue_metadata(ef)
+            src_url = (meta.get("source_url") or meta.get("page_url") or "").strip()
+            candidate_id = (meta.get("candidate_id") or "").strip()
+            slug = re.sub(r"^\d+-(.+)$", r"\1", ef.name)
+            try:
+                post_text = (ef / "post.txt").read_text(encoding="utf-8").strip()
+            except OSError:
+                post_text = ""
+            text_hash = hashlib.sha256(_normalize_text(post_text).encode()).hexdigest() if post_text else ""
+            image_hash = hashlib.sha256((ef / "image.jpg").read_bytes()).hexdigest() if (ef / "image.jpg").is_file() else ""
+            image_key = image_hash or src_url or candidate_id
+            existing_details.append({
+                "rank": rank_value,
+                "folder": ef,
+                "pack_id": meta.get("pack_id"),
+                "slug": slug,
+                "source_url": src_url,
+                "candidate_id": candidate_id,
+                "text_hash": text_hash,
+                "image_key": image_key,
+                "is_posted_today": rank_value in posted_ranks_today_for_pack and meta.get("pack_id") == pack_id,
+            })
+
+        slug_counter = Counter(detail["slug"] for detail in existing_details if detail["slug"])
+        source_counter = Counter(detail["source_url"] for detail in existing_details if detail["source_url"])
+        text_counter = Counter(detail["text_hash"] for detail in existing_details if detail["text_hash"])
+        image_counter = Counter(detail["image_key"] for detail in existing_details if detail["image_key"])
+
+        existing_for_pack = 0
+        for detail in existing_details:
+            if detail["pack_id"] != pack_id:
+                continue
+            is_viable = detail["is_posted_today"] or (
+                (not detail["slug"] or slug_counter[detail["slug"]] == 1)
+                and (not detail["source_url"] or source_counter[detail["source_url"]] == 1)
+                and (not detail["text_hash"] or text_counter[detail["text_hash"]] == 1)
+                and (not detail["image_key"] or image_counter[detail["image_key"]] == 1)
+                and (not detail["slug"] or detail["slug"] not in posted_history["slugs"])
+                and (not detail["source_url"] or detail["source_url"] not in posted_history["source_urls"])
+                and (not detail["text_hash"] or detail["text_hash"] not in posted_history["text_hashes"])
+                and (not detail["image_key"] or detail["image_key"] not in posted_history["image_keys"])
+            )
+            if is_viable:
+                existing_for_pack += 1
+                if detail["slug"]:
+                    existing_date_slugs.add(detail["slug"])
+                if detail["source_url"]:
+                    existing_date_source_urls.add(detail["source_url"])
+                if detail["candidate_id"]:
+                    existing_date_candidate_ids.add(detail["candidate_id"])
+                if detail["text_hash"]:
+                    existing_date_text_hashes.add(detail["text_hash"])
+
         slots_to_fill = min(per_day, max(0, pack_daily_cap - existing_for_pack))
         remaining_pool = len(ranked_pool) - pool_idx
 
@@ -464,12 +707,6 @@ def main(
             })
             continue
 
-        existing_date_slugs: set[str] = set()
-        for _, ef in existing:
-            m = re.match(r"^\d+-(.+)$", ef.name)
-            if m:
-                existing_date_slugs.add(m.group(1))
-
         day_added = 0
         day_skipped_dup = 0
         day_items: list[dict] = []
@@ -483,20 +720,32 @@ def main(
             item = ranked_pool[pool_idx]
             pool_idx += 1
 
-            title = _clean_text(item.get("title") or "Untitled")
-            item_slug = _slug(title)
+            title = _display_title(item)
+            item_slug = _item_slug(item)
+            candidate_id = (item.get("candidate_id") or "").strip()
+            src_url = item.get("source_url") or item.get("page_url") or ""
 
             if item_slug in existing_date_slugs:
+                day_skipped_dup += 1
+                continue
+            if candidate_id and candidate_id in existing_date_candidate_ids:
+                day_skipped_dup += 1
+                continue
+            if src_url and src_url in existing_date_source_urls:
                 day_skipped_dup += 1
                 continue
 
             caption = _make_caption(item)
             if len(caption) > 280:
                 caption = caption[:280].rstrip()
+            caption_hash = hashlib.sha256(_normalize_text(caption).encode()).hexdigest()
+            if caption_hash in existing_date_text_hashes:
+                day_skipped_dup += 1
+                continue
 
             rank = max_existing_rank + day_added + 1
             image_url = item.get("direct_image_url") or ""
-            page_url = item.get("source_url") or item.get("page_url") or ""
+            page_url = src_url
             folder_name = f"{rank:02d}-{item_slug}"
 
             day_item: dict = {
@@ -534,6 +783,11 @@ def main(
 
             day_items.append(day_item)
             existing_date_slugs.add(item_slug)
+            if candidate_id:
+                existing_date_candidate_ids.add(candidate_id)
+            if src_url:
+                existing_date_source_urls.add(src_url)
+            existing_date_text_hashes.add(caption_hash)
             day_added += 1
 
         print(
@@ -591,7 +845,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--from-date", default="today",
-        help="Base date: YYYY-MM-DD or 'today'. Fills from-date+1 through from-date+days (default: today)",
+        help=(
+            "Base date: YYYY-MM-DD or 'today'. Fills from-date+1 through from-date+days by default; "
+            "with --include-today it starts at from-date itself."
+        ),
+    )
+    parser.add_argument(
+        "--include-today", action="store_true",
+        help="Include --from-date itself in the fill range. Use this to reschedule a pack for today.",
     )
     parser.add_argument(
         "--days", type=int, default=7,
@@ -633,6 +894,18 @@ if __name__ == "__main__":
         metavar="N",
         help="Suggested cooldown seconds printed when Wikimedia returns 429 (default: 900)",
     )
+    parser.add_argument(
+        "--refresh-if-empty", action="store_true",
+        help=(
+            "If the candidate export or fresh pool is empty, run the source-pack discovery "
+            "pipeline in --discover-only mode and rebuild the candidate export."
+        ),
+    )
+    parser.add_argument(
+        "--refresh-max-total", type=int, default=40,
+        metavar="N",
+        help="Max candidates to discover when --refresh-if-empty is used (default: 40)",
+    )
     args = parser.parse_args()
 
     try:
@@ -654,6 +927,8 @@ if __name__ == "__main__":
         parser.error("--max-downloads-per-run must be greater than 0")
     if args.retry_after_429_seconds <= 0:
         parser.error("--retry-after-429-seconds must be greater than 0")
+    if args.refresh_max_total <= 0:
+        parser.error("--refresh-max-total must be greater than 0")
 
     try:
         main(
@@ -667,6 +942,9 @@ if __name__ == "__main__":
             download_delay=args.download_delay_seconds,
             max_downloads=args.max_downloads_per_run,
             retry_after_429=args.retry_after_429_seconds,
+            include_today=args.include_today,
+            refresh_if_empty=args.refresh_if_empty,
+            refresh_max_total=args.refresh_max_total,
         )
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"[schedule] Error: {exc}", file=sys.stderr)

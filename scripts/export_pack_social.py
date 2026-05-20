@@ -33,6 +33,7 @@ import shutil
 import sys
 import unicodedata
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 import httpx
 
@@ -67,6 +68,12 @@ _SUPERNATURAL_KEYWORDS = frozenset({
     "ghost", "demon", "spirit", "supernatural", "monster", "folklore", "mythology",
     "hyakki", "yagyo", "shoki", "exorcism", "magic", "mystic", "kitsune",
     "tanuki", "dragon", "kirin", "raijin", "fujin", "fudo",
+})
+
+_MOJIBAKE_MARKERS = ("Ã", "Å", "â", "ä", "æ", "ç", "à", "ð")
+_URL_STOPWORDS = frozenset({
+    "file", "wellcome", "museum", "met", "cropped", "google", "art", "project",
+    "commons", "wikimedia", "image", "anonymous",
 })
 
 
@@ -110,6 +117,78 @@ def _clean_text(text: str) -> str:
     """Strip HTML tags and normalise whitespace."""
     clean = re.sub(r"<[^>]+>", " ", text or "")
     return " ".join(clean.split())
+
+
+def _maybe_fix_mojibake(text: str) -> str:
+    raw = (text or "").strip()
+    if not raw or not any(marker in raw for marker in _MOJIBAKE_MARKERS):
+        return raw
+    try:
+        repaired = raw.encode("latin-1").decode("utf-8")
+    except UnicodeError:
+        return raw
+    return repaired.strip() or raw
+
+
+def _source_label(item: dict) -> str:
+    for key in ("source_url", "page_url", "direct_image_url", "image_url"):
+        raw_url = (item.get(key) or "").strip()
+        if not raw_url:
+            continue
+        parsed = urlparse(raw_url)
+        tail = unquote(Path(parsed.path).name)
+        if not tail:
+            continue
+        tail = re.sub(r"^File:", "", tail, flags=re.IGNORECASE)
+        tail = os.path.splitext(tail)[0]
+        tail = tail.replace("_", " ")
+        tail = re.sub(r"\s+", " ", tail).strip(" -_")
+        tail = _maybe_fix_mojibake(tail)
+        if tail:
+            return tail
+    return ""
+
+
+def _display_title(item: dict) -> str:
+    title = _maybe_fix_mojibake(_clean_text(item.get("title") or ""))
+    source_label = _source_label(item)
+    if not title or title.lower() == "untitled":
+        return source_label or "Untitled"
+    if source_label and (not _slug(title) or any(marker in title for marker in _MOJIBAKE_MARKERS)):
+        return source_label
+    return title
+
+
+def _item_slug(item: dict) -> str:
+    for candidate in (_display_title(item), _source_label(item), item.get("candidate_id") or ""):
+        slug = _slug(str(candidate or ""))
+        if slug:
+            return slug
+    cid = (item.get("candidate_id") or "untitled").replace("cand_", "")
+    return _slug(cid) or "untitled"
+
+
+def _named_subject_from_title(title: str) -> str:
+    patterns = (
+        r"(?:attributes|attribute|portrait|image|depiction|figure|statue|thangka|mandala|object)\s+of\s+(.+?)(?:\s+(?:in|from|by|at|with)\s+|$)",
+        r"(?:for|showing|depicting)\s+(.+?)(?:\s+(?:in|from|by|at|with)\s+|$)",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, title, flags=re.IGNORECASE)
+        if match:
+            subject = match.group(1).strip(" -_,.;:")
+            if subject:
+                return subject[:80]
+
+    tokens = [token for token in re.split(r"[^A-Za-z0-9'-]+", title) if token]
+    filtered = [
+        token for token in tokens
+        if token.lower() not in _URL_STOPWORDS
+        and not re.fullmatch(r"[A-Z]?\d{4,}", token)
+    ]
+    if not filtered:
+        return ""
+    return " ".join(filtered[:6])[:80]
 
 
 def _detect_period(title: str, year: int | None) -> str:
@@ -283,6 +362,10 @@ def _subject_note(title: str) -> str:
         return "Tibetan Buddhist painted scroll -- deity, guardian, or cosmological subject in the thangka tradition."
     if "mandala" in lower:
         return "Ritual cosmogram -- spatial map of a deity's realm used in Vajrayana Buddhist practice and ceremony."
+    if any(kw in lower for kw in ("tibetan", "himalayan", "vajrayana", "lama", "thangka", "mandala")):
+        subject = _named_subject_from_title(title)
+        if subject:
+            return f"Tibetan Buddhist image -- {subject} named in source metadata."
 
     # Tibetan ritual objects checked before generic "vajrayana" so compound titles route correctly
     if "phurba" in lower or "kila" in lower or "ritual dagger" in lower:
@@ -451,7 +534,7 @@ def _subject_note(title: str) -> str:
 
 def _make_caption(item: dict) -> str:
     """Return a caption string under 280 chars."""
-    title = _clean_text(item.get("title") or "Untitled")
+    title = _display_title(item)
     year = item.get("date_year")
 
     opening = _opening_line(title, year)
@@ -627,8 +710,7 @@ def _candidate_dup_reason(
     force: bool,
 ) -> str | None:
     """Return a human-readable reason if this candidate should be skipped, else None."""
-    title = _clean_text(item.get("title") or "")
-    candidate_slug = _slug(title)
+    candidate_slug = _item_slug(item)
 
     if candidate_slug in signals["slugs"]:
         return f"slug already posted: {candidate_slug}"
@@ -716,7 +798,7 @@ def main(pack_id: str, date_str: str, top: int, dry_run: bool, copy_to_social: b
     exported: list[tuple[int, str]] = []   # (rank, folder_name)
 
     for rank, item in enumerate(selected, 1):
-        title = _clean_text(item.get("title") or "Untitled")
+        title = _display_title(item)
         image_url = item.get("direct_image_url") or ""
         year = item.get("date_year")
         license_text = _clean_text(item.get("license") or "unknown")
@@ -725,7 +807,7 @@ def main(pack_id: str, date_str: str, top: int, dry_run: bool, copy_to_social: b
         char_count = len(caption)
         within = "OK" if char_count <= 280 else f"OVER by {char_count - 280}"
 
-        slug_str = _slug(title)
+        slug_str = _item_slug(item)
         folder_name = f"{rank:02d}-{slug_str}"
         folder = out_dir / folder_name
 
