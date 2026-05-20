@@ -75,3 +75,9 @@ reports/source-expansion/
 
 # Claude Code local config
 .claude/
+
+# Google credentials (never commit)
+google-service-account.json
+metal-sorter-496820-u8-9b9db83a06cc.json
+scripts/oauth_client.json
+scripts/oauth_token.json
