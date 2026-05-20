@@ -68,7 +68,7 @@ def main() -> int:
         dry_run=not args.send_test,
     )
 
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    sys.stdout.buffer.write(json.dumps(result, indent=2, ensure_ascii=False).encode("utf-8") + b"\n")
     if args.send_test:
         return 0 if result.get("status") == "logged" else 1
     return 0 if result.get("status") == "dry_run" else 1
