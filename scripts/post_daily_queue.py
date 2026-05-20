@@ -720,11 +720,20 @@ def main(
         log.append(entry)
         _save_log(log)
 
+        _drive_url = ""
         try:
             from src.drive.post_log import log_post as _drive_log_post
-            _drive_log_post(entry, folder, exact_image_path, bundle["text"])
+            _drive_result = _drive_log_post(entry, folder, exact_image_path, bundle["text"])
+            if isinstance(_drive_result, dict):
+                _drive_url = _drive_result.get("drive_url") or ""
         except Exception as _drive_exc:
             print(f"[drive_log] failed upload/log append err={_drive_exc}")
+
+        try:
+            from src.obsidian.artwork_enrichment import append_posting_log_entry as _obs_append
+            _obs_append(folder, entry, bundle["text"], _drive_url, ROOT_DIR)
+        except Exception as _obs_exc:
+            print(f"[obsidian] posting log update failed: {_obs_exc}")
 
         if media_info.get("was_normalized"):
             try:
